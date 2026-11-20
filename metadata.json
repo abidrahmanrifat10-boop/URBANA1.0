@@ -1,0 +1,8 @@
+{
+  "name": "URBANA Smart City",
+  "description": "Smart City Management System for Rajshahi city areas with CityPulse, WasteX, Max-Heap Scheduler, and Road Network Graph algorithms by Team AetherCore.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
