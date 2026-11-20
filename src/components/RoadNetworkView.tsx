@@ -143,10 +143,10 @@ export function RoadNetworkView({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <p className="text-xs font-medium text-slate-500 dark:text-zinc-400">
-            CITYGRAPH · 8×8 Adjacency Matrix · Dijkstra O(V²) &amp; Kruskal MST (Union-Find)
+            Road Network · Routes between city zones
           </p>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-zinc-100 mt-1">
-            Road Network &amp; Route Planner
+            Route Planner
           </h1>
         </div>
 
@@ -160,7 +160,7 @@ export function RoadNetworkView({
                   : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-200'
               }`}
             >
-              Dijkstra Shortest Path
+              Shortest Route
             </button>
             <button
               onClick={() => setMode('kruskal')}
@@ -170,7 +170,7 @@ export function RoadNetworkView({
                   : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-200'
               }`}
             >
-              Kruskal Minimum Plan
+              Minimum Road Plan
             </button>
           </div>
           {isAdmin && (
@@ -178,7 +178,7 @@ export function RoadNetworkView({
               onClick={() => setConfirmResetRoads(true)}
               className="px-3 py-2 text-xs font-medium text-slate-700 dark:text-zinc-200 bg-white dark:bg-[#111316] border border-slate-300 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-900 rounded-xl whitespace-nowrap shrink-0"
             >
-              Reset Demo Roads
+              Restore Default Roads
             </button>
           )}
         </div>
@@ -195,7 +195,7 @@ export function RoadNetworkView({
               </GlassIcon>
               <div>
                 <h2 className="text-sm font-semibold text-slate-900 dark:text-zinc-100">
-                  Interactive Rajshahi Road Graph
+                  Rajshahi Road Map
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                   {mode === 'dijkstra'
@@ -576,7 +576,7 @@ export function RoadNetworkView({
             </section>
           ) : (
             <section className="surface-card p-4 text-xs text-slate-600 dark:text-zinc-400">
-              Select any start and destination area above to compute shortest road routes or minimum spanning road plans.
+              Choose a start and destination to see the shortest route.
             </section>
           )}
         </div>
@@ -595,7 +595,7 @@ export function RoadNetworkView({
                 onClick={onLoadDemoRoads}
                 className="px-3 py-1.5 text-xs font-medium text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg"
               >
-                Load Demo Roads
+                Restore Default Roads
               </button>
             </div>
           ) : (
@@ -697,11 +697,11 @@ export function RoadNetworkView({
         onCancel={() => setPendingDeleteEdge(null)}
       />
 
-      {/* Confirm Reset Demo Roads */}
+      {/* Confirm Restore Default Roads */}
       <ConfirmDialog
         open={confirmResetRoads}
-        title="Reset to Demo Road Network?"
-        description="This restores the default 12 Rajshahi road connections and discards custom road additions or edits."
+        title="Restore default road network?"
+        description="This restores the 12 default road links and removes any custom changes."
         confirmLabel="Reset Roads"
         tone="warning"
         onConfirm={onLoadDemoRoads}

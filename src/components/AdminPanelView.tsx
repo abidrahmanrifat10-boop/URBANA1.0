@@ -105,7 +105,7 @@ export function AdminPanelView({
       setAuditLog(data.auditLog);
       onSettingsUpdated(data.settings);
     } catch (err) {
-      onNotify(err instanceof Error ? err.message : 'Failed to load Admin overview.', 'error');
+      onNotify(err instanceof Error ? err.message : 'Unable to load administration data.', 'error');
     } finally {
       setLoading(false);
     }
@@ -190,19 +190,19 @@ export function AdminPanelView({
           </div>
           <div className="relative z-10 space-y-2">
             <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
-              Dedicated 1-Person Admin Plan
+              Administration
             </p>
             <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-zinc-100">
-              Sole Administrator Access Only
+              Restricted Access
             </h1>
             <p className="text-sm text-slate-600 dark:text-zinc-400 max-w-md mx-auto leading-relaxed">
-              This unified Admin Plan is controlled by 1 person only. All city queues, waste dispatch,
-              customer permissions, and system policies are managed here in one place.
-              {adminName ? ` Sole Admin seat: ${adminName}.` : ''}
+              This area is reserved for the city administrator. Sign in with the administrator
+              account to manage reports, pickups, user accounts and system settings.
+              {adminName ? ` Administrator: ${adminName}.` : ''}
             </p>
             {currentUser && (
               <p className="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-900 rounded-lg px-3 py-2 inline-block mt-2">
-                Signed in as Customer ({currentUser.name}). Use Customer Hub for citizen requests.
+                You are signed in as {currentUser.name}. Use Citizen Services to submit requests.
               </p>
             )}
           </div>
@@ -212,7 +212,7 @@ export function AdminPanelView({
               onClick={onOpenSignIn}
               className="px-5 py-2.5 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-xl transition-colors whitespace-nowrap"
             >
-              {currentUser ? 'Sign In with Sole Admin Account' : 'Sign In as Sole Admin'}
+              {currentUser ? 'Switch to Administrator Account' : 'Administrator Sign In'}
             </button>
           </div>
         </Tilt3DCard>
@@ -228,8 +228,8 @@ export function AdminPanelView({
       setAuditLog(res.auditLog);
       onNotify(
         res.settings.intakeOpen
-          ? 'Customer intake is now OPEN.'
-          : 'Customer intake paused for maintenance.',
+          ? 'Citizen submissions are now open.'
+          : 'Citizen submissions are paused.',
         'info',
       );
     } catch (err) {
@@ -262,7 +262,7 @@ export function AdminPanelView({
       const res = await updateAdminSettings({ maintenanceBanner: bannerDraft });
       onSettingsUpdated(res.settings);
       setAuditLog(res.auditLog);
-      onNotify('Citywide customer notice saved.', 'success');
+      onNotify('Public notice saved.', 'success');
     } catch (err) {
       onNotify(err instanceof Error ? err.message : 'Failed to save notice.', 'error');
     } finally {
@@ -317,10 +317,10 @@ export function AdminPanelView({
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
-            Sole Admin Plan · 1 / 1 Authority Seat ({currentUser.name})
+            Signed in as {currentUser.name}
           </p>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-zinc-100 mt-1">
-            Unified Admin Control Center
+            Administration
           </h1>
         </div>
 
@@ -331,7 +331,7 @@ export function AdminPanelView({
           className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-medium text-slate-700 dark:text-zinc-200 bg-white dark:bg-[#111316] border border-slate-300 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-900 rounded-xl transition-colors w-fit whitespace-nowrap"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} aria-hidden="true" />
-          <span>{loading ? 'Refreshing...' : 'Refresh Control Data'}</span>
+          <span>{loading ? 'Refreshing...' : 'Refresh'}</span>
         </button>
       </div>
 
@@ -383,8 +383,7 @@ export function AdminPanelView({
                 <p className="text-xs text-emerald-100/80 mt-0.5">{currentUser.email}</p>
               </div>
               <p className="text-xs text-emerald-50/90 leading-relaxed">
-                Exclusive single-person control over Rajshahi dispatch queues, waste scheduling,
-                road network links, customer intake policy, and all registered Customer accounts.
+                Manage report queues, waste collection, road links, intake settings and citizen accounts.
               </p>
             </div>
 
@@ -414,10 +413,10 @@ export function AdminPanelView({
                   </GlassIcon>
                   <div>
                     <h2 className="text-sm font-semibold text-slate-900 dark:text-zinc-100">
-                      System Governance &amp; Intake Policy
+                      Intake Settings
                     </h2>
                     <p className="text-xs text-slate-500 dark:text-zinc-400">
-                      Changes immediately control Customer Hub submissions
+                      Changes apply immediately to citizen submissions
                     </p>
                   </div>
                 </div>
@@ -469,7 +468,7 @@ export function AdminPanelView({
 
               <form onSubmit={handleSaveBanner} className="space-y-2">
                 <label htmlFor="admin-banner-input" className="block text-xs font-medium text-slate-700 dark:text-zinc-300">
-                  Public Customer Notice Banner
+                  Public Notice
                 </label>
                 <div className="flex flex-col sm:flex-row gap-2">
                   <input
@@ -478,7 +477,7 @@ export function AdminPanelView({
                     value={bannerDraft}
                     onChange={(e) => setBannerDraft(e.target.value)}
                     maxLength={180}
-                    placeholder="Optional notice visible in Customer Hub..."
+                    placeholder="Optional notice shown to citizens"
                     className="flex-1 h-10 px-3 text-sm bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 border border-slate-300 dark:border-zinc-700 rounded-lg"
                   />
                   <button
@@ -730,7 +729,7 @@ export function AdminPanelView({
                   Customer Accounts ({customers.length})
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-zinc-400">
-                  Suspend or remove customer access at any time
+                  Suspend or remove citizen accounts
                 </p>
               </div>
             </div>
@@ -756,7 +755,7 @@ export function AdminPanelView({
                   : 'No customers match your search.'}
               </p>
               <p className="text-xs text-slate-500 dark:text-zinc-400">
-                New users who sign up automatically receive Customer Control accounts and appear here.
+                Citizens who create an account will appear here.
               </p>
             </div>
           ) : (
@@ -850,7 +849,7 @@ export function AdminPanelView({
           <div className="mt-3 space-y-2 max-h-96 overflow-y-auto pr-1">
             {auditLog.length === 0 ? (
               <p className="text-xs text-slate-400 dark:text-zinc-500 py-8 text-center">
-                Admin actions will appear here automatically.
+                Administrator actions will be recorded here.
               </p>
             ) : (
               auditLog.map((entry) => (

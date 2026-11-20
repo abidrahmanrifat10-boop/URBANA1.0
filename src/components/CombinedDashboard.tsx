@@ -48,7 +48,7 @@ interface CombinedDashboardProps {
   queueSize: number;
   undoSize: number;
   isDark?: boolean;
-  onExportCsv: () => void;
+  onExportCsv?: () => void;
   onNavigate: (tab: ActiveTab) => void;
 }
 
@@ -148,7 +148,7 @@ export function CombinedDashboard({
         title: `${r.category} Report`,
         description: r.description,
         area: r.area,
-        dateLabel: r.createdAt || 'Starter',
+        dateLabel: r.createdAt || 'Earlier',
         metricLabel: priorityText(r.priority),
         done: r.resolved,
         doneText: 'Resolved',
@@ -163,7 +163,7 @@ export function CombinedDashboard({
         title: `${w.wasteType} Pickup`,
         description: w.notes || `${w.amountKg} kg scheduled load`,
         area: w.area,
-        dateLabel: w.createdAt || 'Starter',
+        dateLabel: w.createdAt || 'Earlier',
         metricLabel: `${w.amountKg.toLocaleString()} kg`,
         done: w.collected,
         doneText: 'Collected',
@@ -242,8 +242,8 @@ export function CombinedDashboard({
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-0.5">
             {currentUser
-              ? `${currentUser.role} summary across Rajshahi civic reports, WasteX pickups, and MST routes`
-              : 'Here is the live summary of Rajshahi smart city data'}
+              ? `Welcome back, ${currentUser.name}. Here is today's picture of city services.`
+              : 'Live status of civic reports, waste collection and road access across Rajshahi.'}
           </p>
         </div>
 
@@ -255,7 +255,7 @@ export function CombinedDashboard({
               onChange={(e) => setSelectedZone(e.target.value)}
               className="h-9 pl-3 pr-8 text-xs font-medium bg-white dark:bg-[#111316] text-slate-800 dark:text-zinc-200 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-xs transition-colors"
             >
-              <option value="all">All 8 Zones</option>
+              <option value="all">All zones</option>
               {AREAS.map((area) => (
                 <option key={area} value={area}>
                   {area}
@@ -275,14 +275,16 @@ export function CombinedDashboard({
             </button>
           )}
 
+          {onExportCsv && (
           <button
             type="button"
             onClick={onExportCsv}
             className="inline-flex items-center gap-1.5 h-9 px-3.5 text-xs font-medium bg-white dark:bg-[#111316] text-slate-800 dark:text-zinc-200 border border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-900 rounded-xl shadow-xs transition-colors whitespace-nowrap"
           >
             <Download className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" aria-hidden="true" />
-            <span>Export CSV</span>
+            <span>Export Report</span>
           </button>
+          )}
         </div>
       </div>
 
@@ -302,7 +304,7 @@ export function CombinedDashboard({
               <div>
                 <div className="text-sm font-semibold text-white">City Resolution</div>
                 <div className="text-xs text-emerald-100/80">
-                  {selectedZone === 'all' ? 'All 8 Rajshahi Zones' : selectedZone}
+                  {selectedZone === 'all' ? 'All Rajshahi zones' : selectedZone}
                 </div>
               </div>
             </div>
@@ -326,7 +328,7 @@ export function CombinedDashboard({
             onClick={() => onNavigate('citypulse')}
             className="relative z-10 mt-5 pt-3.5 border-t border-white/15 flex items-center justify-between text-xs font-medium text-emerald-50 hover:text-white transition-colors"
           >
-            <span>See details · {stats.cityCritical} critical</span>
+            <span>View reports · {stats.cityCritical} critical</span>
             <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
           </button>
         </Tilt3DCard>
@@ -346,7 +348,7 @@ export function CombinedDashboard({
                   Pending Waste Load
                 </div>
                 <div className="text-xs text-slate-500 dark:text-zinc-400">
-                  WasteX Priority Dispatch Queue
+                  Awaiting collection
                 </div>
               </div>
             </div>
@@ -370,13 +372,13 @@ export function CombinedDashboard({
             className="relative z-10 mt-5 pt-3.5 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-between text-xs font-medium text-slate-600 dark:text-zinc-400 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors"
           >
             <span>
-              View summary · {stats.nextPickup ? `Next #${stats.nextPickup.id}` : 'Heap clear'}
+              View schedule · {stats.nextPickup ? `Next #${stats.nextPickup.id}` : 'All clear'}
             </span>
             <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
           </button>
         </Tilt3DCard>
 
-        {/* Card 3: Road Network MST */}
+        {/* Card 3: Road Network */}
         <Tilt3DCard
           className="group lg:col-span-4 p-5 sm:p-6 flex flex-col justify-between"
           maxTilt={2.4}
@@ -388,10 +390,10 @@ export function CombinedDashboard({
               </GlassIcon>
               <div>
                 <div className="text-sm font-semibold text-slate-900 dark:text-zinc-100">
-                  Road Network MST
+                  Road Network
                 </div>
                 <div className="text-xs text-slate-500 dark:text-zinc-400">
-                  Kruskal Spanning Plan · {roadEdges.length} Links
+                  {roadEdges.length} active road links
                 </div>
               </div>
             </div>
@@ -414,7 +416,7 @@ export function CombinedDashboard({
             onClick={() => onNavigate('roads')}
             className="relative z-10 mt-5 pt-3.5 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-between text-xs font-medium text-slate-600 dark:text-zinc-400 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors"
           >
-            <span>Analyze route performance</span>
+            <span>Plan a route</span>
             <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
           </button>
         </Tilt3DCard>
@@ -434,7 +436,7 @@ export function CombinedDashboard({
                 Rajshahi Zones
               </h2>
               <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-                Zones {visibleZoneStart + 1}–{visibleZoneStart + 4} of 8 · Click zone to filter
+                Zones {visibleZoneStart + 1}–{visibleZoneStart + 4} of 8 · Select a zone to filter
               </p>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
@@ -514,7 +516,7 @@ export function CombinedDashboard({
                             : 'text-slate-400 dark:text-zinc-500'
                       }`}
                     >
-                      {hasCritical ? 'Critical Alert' : openIssues > 0 ? 'Active' : 'Clear'}
+                      {hasCritical ? 'Critical' : openIssues > 0 ? 'Active' : 'Clear'}
                     </span>
                   </div>
                 </button>
@@ -532,7 +534,7 @@ export function CombinedDashboard({
           <div className="relative z-10 flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-xs font-medium text-slate-500 dark:text-zinc-400">
-                Zone Demand Across Rajshahi
+                Demand by Zone
               </p>
               <div className="text-2xl sm:text-[28px] font-bold font-mono tabular-nums tracking-tight text-slate-900 dark:text-zinc-100 mt-1">
                 {barMetric === 'waste'
@@ -589,7 +591,7 @@ export function CombinedDashboard({
               </div>
 
               <span className="text-[11px] text-slate-400 dark:text-zinc-500">
-                Hover or click any zone bar
+                Select a bar for details
               </span>
             </div>
 
@@ -692,7 +694,7 @@ export function CombinedDashboard({
                 Recent Activities
               </h2>
               <p className="text-xs text-slate-500 dark:text-zinc-400">
-                Latest municipal reports &amp; WasteX pickups
+                Latest reports and pickup requests
               </p>
             </div>
 
@@ -706,7 +708,7 @@ export function CombinedDashboard({
                   type="text"
                   value={activitySearch}
                   onChange={(e) => setActivitySearch(e.target.value)}
-                  placeholder="Search ID or zone..."
+                  placeholder="Search by ID or zone"
                   aria-label="Search recent activities"
                   className="h-9 w-44 sm:w-52 pl-8 pr-3 text-xs bg-slate-50 dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 border border-slate-200 dark:border-zinc-800 rounded-xl"
                 />
@@ -735,7 +737,7 @@ export function CombinedDashboard({
           {filteredActivities.length === 0 ? (
             <div className="p-10 text-center space-y-2">
               <p className="text-sm font-medium text-slate-800 dark:text-zinc-200">
-                No activities match your current filter.
+                No activity matches your filters.
               </p>
               <button
                 type="button"
@@ -842,7 +844,7 @@ export function CombinedDashboard({
                 Rajshahi Road Map
               </h2>
               <p className="text-xs text-slate-500 dark:text-zinc-400">
-                Click any zone node to inspect routes
+                Select a zone to see its connections
               </p>
             </div>
             <button
@@ -850,7 +852,7 @@ export function CombinedDashboard({
               onClick={() => onNavigate('roads')}
               className="text-xs font-medium text-emerald-700 dark:text-emerald-400 hover:underline whitespace-nowrap"
             >
-              Open Graph
+              Open map
             </button>
           </div>
 
@@ -932,14 +934,14 @@ export function CombinedDashboard({
               onClick={() => onNavigate('scheduler')}
               className="py-2 px-3 text-xs font-medium text-white bg-emerald-700 hover:bg-emerald-800 rounded-xl transition-colors whitespace-nowrap"
             >
-              Max-Heap Queue
+              Pickup Schedule
             </button>
             <button
               type="button"
               onClick={() => onNavigate('about')}
               className="py-2 px-3 text-xs font-medium text-slate-800 dark:text-zinc-200 bg-slate-100 dark:bg-zinc-900 hover:bg-slate-200 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-800 rounded-xl transition-colors whitespace-nowrap"
             >
-              About URBANA
+              About
             </button>
           </div>
         </Tilt3DCard>
