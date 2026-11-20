@@ -3,25 +3,29 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import type { User as FirebaseUser } from 'firebase/auth';
 import {
   AlertCircle,
   CheckCircle2,
   ChevronRight,
-  FileSpreadsheet,
+  Download,
   Info,
   Layers,
   LayoutDashboard,
   LogIn,
   LogOut,
   Menu,
+  Moon,
+  Plus,
   Recycle,
   Route,
+  Search,
   ShieldAlert,
+  ShieldCheck,
+  Sun,
   UserCheck,
-  UserPlus,
+  Users,
   X,
 } from 'lucide-react';
 import {
@@ -37,59 +41,66 @@ import {
   getDemoWasteRecords,
   parseCityReports,
   parseWasteRecords,
+  priorityText,
   sanitizePipeText,
   serializeCityReports,
   serializeWasteRecords,
+  statusText,
 } from './engine/urbanaEngine';
 import { ActiveTab, CombinedDashboard } from './components/CombinedDashboard';
 import { CityPulseView } from './components/CityPulseView';
 import { WasteXView } from './components/WasteXView';
 import { SchedulerView } from './components/SchedulerView';
 import { RoadNetworkView } from './components/RoadNetworkView';
-import { GoogleSheetsView } from './components/GoogleSheetsView';
+import { CustomerHubView } from './components/CustomerHubView';
+import { AdminPanelView } from './components/AdminPanelView';
 import { AboutView } from './components/AboutView';
 import { AuthModal } from './components/AuthModal';
-import { GlassIcon, GlassTone } from './components/GlassIcon';
 import {
   AuthUser,
-  fetchUserSheetConfig,
+  SystemSettings,
+  fetchSystemStatus,
   logoutAccount,
-  saveUserSheetConfig,
+  recordAdminAudit,
 } from './services/authClient';
-import {
-  appendCityReportRow,
-  appendWasteRecordRow,
-  createUrbanaSpreadsheet,
-  getGoogleAccessToken,
-  getSpreadsheetInfo,
-  initGoogleSheetsAuth,
-  signInWithGoogleSheets,
-  signOutGoogleSheets,
-  syncAllToSpreadsheet,
-} from './services/googleSheets';
 
 const STORAGE_KEYS = {
   city: 'urbana_citypulse_reports_v1',
   waste: 'urbana_wastex_records_v1',
   roads: 'urbana_roads_v1',
-  sheetMeta: 'urbana_sheet_meta_v1',
+  theme: 'urbana_theme_v1',
 };
 
-const NAV_ITEMS: Array<{
+type ThemeMode = 'white' | 'black';
+
+interface NavItemDef {
   id: ActiveTab;
   label: string;
-  subtitle: string;
-  tone: GlassTone;
+  group: 'MAIN MENU' | 'OPERATIONS' | 'SYSTEM';
   icon: typeof LayoutDashboard;
-}> = [
-  { id: 'overview', label: 'Combined Dashboard', subtitle: 'Overview & Area Stats', tone: 'blue', icon: LayoutDashboard },
-  { id: 'citypulse', label: 'CITYPULSE', subtitle: 'Issue Queue & Undo', tone: 'blue', icon: ShieldAlert },
-  { id: 'wastex', label: 'WASTEX', subtitle: 'Waste Collection Log', tone: 'emerald', icon: Recycle },
-  { id: 'scheduler', label: 'Heap Scheduler', subtitle: 'Max-Heap & What-If', tone: 'amber', icon: Layers },
-  { id: 'roads', label: 'Road Network', subtitle: 'Dijkstra & Kruskal MST', tone: 'slate', icon: Route },
-  { id: 'sheets', label: 'Google Sheet', subtitle: 'Excel Sync & Export', tone: 'emerald', icon: FileSpreadsheet },
-  { id: 'about', label: 'About URBANA', subtitle: 'System & Team Details', tone: 'blue', icon: Info },
+  adminOnly?: boolean;
+}
+
+const NAV_ITEMS: NavItemDef[] = [
+  { id: 'overview', label: 'Dashboard', group: 'MAIN MENU', icon: LayoutDashboard },
+  { id: 'customer', label: 'Customer Hub', group: 'MAIN MENU', icon: Users },
+  { id: 'citypulse', label: 'CityPulse', group: 'MAIN MENU', icon: ShieldAlert },
+  { id: 'wastex', label: 'WasteX', group: 'MAIN MENU', icon: Recycle },
+  { id: 'scheduler', label: 'Scheduler', group: 'OPERATIONS', icon: Layers },
+  { id: 'roads', label: 'Road Network', group: 'OPERATIONS', icon: Route },
+  { id: 'admin', label: 'Admin Plan', group: 'SYSTEM', icon: ShieldCheck, adminOnly: true },
+  { id: 'about', label: 'About URBANA', group: 'SYSTEM', icon: Info },
 ];
+
+const NAV_GROUPS: Array<NavItemDef['group']> = ['MAIN MENU', 'OPERATIONS', 'SYSTEM'];
+
+const DEFAULT_SETTINGS: SystemSettings = {
+  intakeOpen: true,
+  maintenanceBanner: '',
+  autoEscalateCritical: true,
+  updatedAt: '',
+  updatedBy: 'System',
+};
 
 interface ToastNotification {
   id: number;
@@ -111,23 +122,53 @@ export default function App() {
   const [isHydrated, setIsHydrated] = useState(false);
   const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [sidebarSearch, setSidebarSearch] = useState('');
   const [toast, setToast] = useState<ToastNotification | null>(null);
   const [, setTick] = useState(0);
 
-  // Account auth state (session token lives strictly in memory in authClient.ts)
+  // Dual Theme State: 'white' (Light) | 'black' (Dark OLED)
+  const [theme, setTheme] = useState<ThemeMode>(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.theme);
+      return stored === 'black' ? 'black' : 'white';
+    } catch {
+      return 'white';
+    }
+  });
+  const isDark = theme === 'black';
+
+  // Single-Admin + Customer auth state (Bearer token held strictly in memory in authClient.ts)
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('register');
+  const [adminClaimed, setAdminClaimed] = useState(true);
+  const [adminName, setAdminName] = useState<string | null>(null);
+  const [systemSettings, setSystemSettings] = useState<SystemSettings>(DEFAULT_SETTINGS);
 
-  // Google Sheets state (access token lives strictly in memory in googleSheets.ts)
-  const [googleUser, setGoogleUser] = useState<FirebaseUser | null>(null);
-  const [hasGoogleToken, setHasGoogleToken] = useState(false);
-  const [spreadsheetId, setSpreadsheetId] = useState('');
-  const [spreadsheetTitle, setSpreadsheetTitle] = useState('');
-  const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
-  const [isSheetBusy, setIsSheetBusy] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const isAdmin = currentUser?.role === 'Admin';
 
   const forceSync = () => setTick((t) => t + 1);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', theme === 'black');
+    try {
+      localStorage.setItem(STORAGE_KEYS.theme, theme);
+    } catch {
+      // Ignore storage errors
+    }
+  }, [theme]);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   function persistState() {
     try {
@@ -136,21 +177,6 @@ export default function App() {
       localStorage.setItem(STORAGE_KEYS.roads, graphRef.current.serialize());
     } catch {
       // Ignore storage quota errors in restricted environments
-    }
-  }
-
-  function persistLocalSheetMeta(id: string, title: string, syncEnabled: boolean) {
-    try {
-      if (!id) {
-        localStorage.removeItem(STORAGE_KEYS.sheetMeta);
-      } else {
-        localStorage.setItem(
-          STORAGE_KEYS.sheetMeta,
-          JSON.stringify({ spreadsheetId: id, spreadsheetTitle: title, autoSync: syncEnabled }),
-        );
-      }
-    } catch {
-      // Ignore storage quota errors
     }
   }
 
@@ -169,19 +195,20 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [toast]);
 
-  // Listen for Firebase Google Sheets auth state changes
+  // Fetch non-sensitive system access info (whether 1/1 Admin seat is claimed + intake settings)
+  async function refreshSystemStatus() {
+    try {
+      const status = await fetchSystemStatus();
+      setAdminClaimed(status.adminClaimed);
+      setAdminName(status.adminName);
+      setSystemSettings(status.settings);
+    } catch {
+      // Non-fatal if server offline during static preview
+    }
+  }
+
   useEffect(() => {
-    const unsubscribe = initGoogleSheetsAuth(
-      (user) => {
-        setGoogleUser(user);
-        setHasGoogleToken(Boolean(getGoogleAccessToken()));
-      },
-      () => {
-        setGoogleUser(null);
-        setHasGoogleToken(false);
-      },
-    );
-    return () => unsubscribe();
+    void refreshSystemStatus();
   }, []);
 
   // Initial load mirroring C++ main()
@@ -190,7 +217,6 @@ export default function App() {
       const savedCity = localStorage.getItem(STORAGE_KEYS.city);
       const savedWaste = localStorage.getItem(STORAGE_KEYS.waste);
       const savedRoads = localStorage.getItem(STORAGE_KEYS.roads);
-      const savedSheetMeta = localStorage.getItem(STORAGE_KEYS.sheetMeta);
 
       if (savedCity !== null) {
         const parsed = parseCityReports(savedCity);
@@ -220,17 +246,6 @@ export default function App() {
         graphRef.current.loadFromText(savedRoads);
       } else {
         graphRef.current.loadDemo();
-      }
-
-      if (savedSheetMeta) {
-        const parsedMeta = JSON.parse(savedSheetMeta) as {
-          spreadsheetId?: string;
-          spreadsheetTitle?: string;
-        };
-        if (parsedMeta.spreadsheetId) {
-          setSpreadsheetId(parsedMeta.spreadsheetId);
-          setSpreadsheetTitle(parsedMeta.spreadsheetTitle || 'URBANA Smart City Sheet');
-        }
       }
     } catch {
       cityListRef.current.clear();
@@ -263,128 +278,109 @@ export default function App() {
     return new Date().toLocaleDateString('en-GB');
   }
 
-  function currentActorLabel(): string {
-    return currentUser?.name || googleUser?.displayName || 'Citizen / Operator';
+  function logAdminOp(action: string, target: string) {
+    if (!isAdmin) return;
+    void recordAdminAudit(action, target).catch(() => {
+      // Non-fatal
+    });
+  }
+
+  function requireAdminGuard(actionLabel: string): boolean {
+    if (isAdmin) return true;
+    showToast(
+      `Authorization required: sign in with an authorized account to ${actionLabel}.`,
+      'error',
+    );
+    setAuthModalMode('login');
+    setAuthModalOpen(true);
+    return false;
   }
 
   // ---------------- ACCOUNT HANDLERS ----------------
 
-  async function handleAuthSuccess(user: AuthUser, mode: 'login' | 'register') {
+  function handleAuthSuccess(user: AuthUser, mode: 'login' | 'register') {
     setCurrentUser(user);
     setAuthModalOpen(false);
-    showToast(
-      mode === 'register'
-        ? `Account created! Welcome, ${user.name}.`
-        : `Signed in as ${user.name}.`,
-      'success',
-    );
-    try {
-      const serverCfg = await fetchUserSheetConfig();
-      if (serverCfg?.spreadsheetId) {
-        setSpreadsheetId(serverCfg.spreadsheetId);
-        setSpreadsheetTitle(serverCfg.spreadsheetTitle);
-        persistLocalSheetMeta(serverCfg.spreadsheetId, serverCfg.spreadsheetTitle, true);
-      } else if (spreadsheetId) {
-        await saveUserSheetConfig({ spreadsheetId, spreadsheetTitle, autoSync: true });
-      }
-    } catch {
-      // Non-fatal if sheet config sync fails
+    void refreshSystemStatus();
+    if (user.role === 'Admin') {
+      showToast(`Welcome back, ${user.name}.`, 'success');
+      setActiveTab('admin');
+    } else {
+      showToast(
+        mode === 'register'
+          ? `Customer account created! Welcome, ${user.name}.`
+          : `Signed in as ${user.name}.`,
+        'success',
+      );
+      if (activeTab === 'admin') setActiveTab('customer');
     }
   }
 
   async function handleSignOutAccount() {
     await logoutAccount();
     setCurrentUser(null);
-    showToast('Signed out of your URBANA account.', 'info');
+    if (activeTab === 'admin') setActiveTab('overview');
+    showToast('Signed out of URBANA.', 'info');
   }
 
-  // ---------------- GOOGLE SHEETS HANDLERS ----------------
-
-  async function saveSheetLink(id: string, title: string) {
-    setSpreadsheetId(id);
-    setSpreadsheetTitle(title);
-    persistLocalSheetMeta(id, title, true);
-    if (currentUser) {
-      try {
-        await saveUserSheetConfig({ spreadsheetId: id, spreadsheetTitle: title, autoSync: true });
-      } catch {
-        // Ignore non-fatal server preference save error
-      }
-    }
-  }
-
-  async function ensureLinkedSpreadsheet(): Promise<string> {
-    if (spreadsheetId) {
-      try {
-        const info = await getSpreadsheetInfo(spreadsheetId);
-        if (info.title !== spreadsheetTitle) {
-          await saveSheetLink(info.spreadsheetId, info.title);
-        }
-        return info.spreadsheetId;
-      } catch {
-        // Fall through to create a fresh sheet if the old one was deleted
-      }
-    }
-    const created = await createUrbanaSpreadsheet(
-      cityListRef.current.toArray(),
-      wasteListRef.current.toArray(),
-    );
-    await saveSheetLink(created.spreadsheetId, created.title);
-    setLastSyncAt(nowTime());
-    return created.spreadsheetId;
-  }
-
-  async function handleGoogleSignIn() {
-    setIsSheetBusy(true);
-    try {
-      const { user } = await signInWithGoogleSheets();
-      setGoogleUser(user);
-      setHasGoogleToken(true);
-      await ensureLinkedSpreadsheet();
-      showToast(
-        `Google Sheet connected (${user.email || user.displayName || 'Google'}). Every new report now auto-saves.`,
-        'success',
+  function handleExportReportCsv() {
+    const esc = (v: string | number) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const lines: string[] = [];
+    lines.push('URBANA RAJSHAHI SMART CITY REPORT');
+    lines.push(['Report ID', 'Date', 'Area', 'Category', 'Priority', 'Status', 'Description', 'Submitted By'].map(esc).join(','));
+    for (const r of cityListRef.current.toArray()) {
+      lines.push(
+        [
+          r.id,
+          r.createdAt || 'Starter',
+          r.area,
+          r.category,
+          priorityText(r.priority),
+          statusText(r.resolved),
+          r.description,
+          r.submittedBy || 'URBANA Control',
+        ]
+          .map(esc)
+          .join(','),
       );
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Google sign-in failed.', 'error');
-    } finally {
-      setIsSheetBusy(false);
     }
-  }
-
-  async function handleGoogleSignOut() {
-    setIsSheetBusy(true);
-    try {
-      await signOutGoogleSheets();
-      setGoogleUser(null);
-      setHasGoogleToken(false);
-      showToast('Disconnected Google Sheets session.', 'info');
-    } finally {
-      setIsSheetBusy(false);
-    }
-  }
-
-  async function handleSyncAllToSheet() {
-    setIsSheetBusy(true);
-    try {
-      const id = await ensureLinkedSpreadsheet();
-      await syncAllToSpreadsheet(
-        id,
-        cityListRef.current.toArray(),
-        wasteListRef.current.toArray(),
+    lines.push('');
+    lines.push('WASTEX COLLECTION LOG');
+    lines.push(['Waste ID', 'Date', 'Area', 'Type', 'Amount (kg)', 'Urgency', 'Status', 'Notes', 'Submitted By'].map(esc).join(','));
+    for (const w of wasteListRef.current.toArray()) {
+      lines.push(
+        [
+          w.id,
+          w.createdAt || 'Starter',
+          w.area,
+          w.wasteType,
+          w.amountKg,
+          priorityText(w.urgency),
+          w.collected ? 'Collected' : 'Pending',
+          w.notes || '',
+          w.submittedBy || 'URBANA Control',
+        ]
+          .map(esc)
+          .join(','),
       );
-      setLastSyncAt(nowTime());
-      showToast('All CityPulse & WasteX records synced to Google Sheet.', 'success');
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Failed to sync to Google Sheet.', 'error');
-    } finally {
-      setIsSheetBusy(false);
     }
+    const blob = new Blob([`\uFEFF${lines.join('\n')}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `URBANA_Rajshahi_Report_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Exported Rajshahi Smart City report CSV.', 'success');
   }
 
   // ---------------- CITYPULSE HANDLERS ----------------
 
   function handleAddCityReport(data: Omit<CityReport, 'id' | 'resolved'>) {
+    if (!systemSettings.intakeOpen && !isAdmin) {
+      showToast('Citizen report submissions are temporarily paused.', 'error');
+      return;
+    }
     const list = cityListRef.current;
     if (list.full()) {
       showToast('Report storage full (500 records maximum).', 'error');
@@ -397,7 +393,8 @@ export default function App() {
       description: sanitizePipeText(data.description),
       priority: data.priority,
       resolved: false,
-      submittedBy: currentActorLabel(),
+      submittedBy: currentUser?.name || 'Customer',
+      ownerEmail: currentUser?.email,
       createdAt: todayStamp(),
     };
     if (!list.insert(report)) {
@@ -408,30 +405,18 @@ export default function App() {
     const queued = queueRef.current.enqueue(report.id);
     nextCityIdRef.current++;
     commitAndSync();
-
-    if (hasGoogleToken) {
-      void (spreadsheetId
-        ? appendCityReportRow(spreadsheetId, report)
-        : ensureLinkedSpreadsheet())
-        .then(() => {
-          setLastSyncAt(nowTime());
-          showToast(`City report #${report.id} logged & saved to Google Sheet.`, 'success');
-        })
-        .catch(() => {
-          showToast(`Report #${report.id} saved locally (reconnect Google Sheet to sync).`, 'info');
-        });
-      return;
-    }
+    if (isAdmin) logAdminOp('Logged city report', `#${report.id} (${report.area})`);
 
     showToast(
       queued
-        ? `City report added. ID: ${report.id}`
-        : `City report ${report.id} saved (complaint queue full).`,
+        ? `City report #${report.id} submitted to queue.`
+        : `City report #${report.id} saved (complaint queue full).`,
       queued ? 'success' : 'info',
     );
   }
 
   function handleUpdateCityReport(id: number, description: string, priority: PriorityLevel) {
+    if (!requireAdminGuard('edit city reports')) return;
     const node = cityListRef.current.find(id);
     if (!node) {
       showToast(`Report ${id} not found.`, 'error');
@@ -441,10 +426,12 @@ export default function App() {
     node.data.description = sanitizePipeText(description);
     node.data.priority = priority;
     commitAndSync();
+    logAdminOp('Updated city report', `#${id}`);
     showToast(`Updated report ${id}.`, 'success');
   }
 
   function handleToggleCityResolved(id: number, resolved: boolean) {
+    if (!requireAdminGuard('change report completion status')) return;
     const node = cityListRef.current.find(id);
     if (!node || node.data.resolved === resolved) return;
     undoRef.current.push({ type: 'ACT_MODIFY', before: { ...node.data }, timestamp: nowTime() });
@@ -459,22 +446,36 @@ export default function App() {
       }
     }
     commitAndSync();
+    logAdminOp(resolved ? 'Resolved city report' : 'Reopened city report', `#${id}`);
     showToast(`Report ${id} marked ${resolved ? 'Completed' : `Pending${queuedNote}`}.`, 'success');
   }
 
-  function handleDeleteCityReport(id: number) {
+  function handleDeleteCityReport(id: number, allowOwner = false) {
     const node = cityListRef.current.find(id);
     if (!node) {
       showToast(`Report ${id} not found.`, 'error');
       return;
     }
+    const ownsReport =
+      allowOwner &&
+      currentUser &&
+      !node.data.resolved &&
+      (node.data.ownerEmail?.toLowerCase() === currentUser.email.toLowerCase() ||
+        node.data.submittedBy === currentUser.name);
+
+    if (!isAdmin && !ownsReport) {
+      requireAdminGuard('delete city reports');
+      return;
+    }
     undoRef.current.push({ type: 'ACT_DELETE', before: { ...node.data }, timestamp: nowTime() });
     cityListRef.current.remove(id);
     commitAndSync();
-    showToast(`Report ${id} deleted (undo available).`, 'info');
+    if (isAdmin) logAdminOp('Deleted city report', `#${id}`);
+    showToast(`Report ${id} removed.`, 'info');
   }
 
   function handleProcessNextComplaint() {
+    if (!requireAdminGuard('process the FIFO complaint queue')) return;
     const id = queueRef.current.dequeue();
     if (id === null) {
       showToast('Complaint queue is empty.', 'info');
@@ -494,10 +495,12 @@ export default function App() {
     undoRef.current.push({ type: 'ACT_MODIFY', before: { ...node.data }, timestamp: nowTime() });
     node.data.resolved = true;
     commitAndSync();
+    logAdminOp('Processed FIFO complaint', `#${id} (${node.data.area})`);
     showToast(`Processed ID ${id} (${node.data.area}, ${node.data.category}) -> Completed.`, 'success');
   }
 
   function handleUndoLastCityAction() {
+    if (!requireAdminGuard('undo city report actions')) return;
     const action = undoRef.current.pop();
     if (!action) {
       showToast('Nothing to undo.', 'info');
@@ -527,11 +530,16 @@ export default function App() {
       );
     }
     commitAndSync();
+    logAdminOp('Undo action', `${action.type} #${action.before.id}`);
   }
 
   // ---------------- WASTEX & SCHEDULER HANDLERS ----------------
 
   function handleAddWaste(data: Omit<WasteRecord, 'id' | 'collected'>) {
+    if (!systemSettings.intakeOpen && !isAdmin) {
+      showToast('Waste pickup submissions are temporarily paused.', 'error');
+      return;
+    }
     const list = wasteListRef.current;
     if (list.full()) {
       showToast('Waste storage full (500 records maximum).', 'error');
@@ -545,34 +553,22 @@ export default function App() {
       urgency: data.urgency,
       notes: sanitizePipeText(data.notes),
       collected: false,
-      submittedBy: currentActorLabel(),
+      submittedBy: currentUser?.name || 'Customer',
+      ownerEmail: currentUser?.email,
       createdAt: todayStamp(),
     };
     if (list.insert(record)) {
       nextWasteIdRef.current++;
       commitAndSync();
-
-      if (hasGoogleToken) {
-        void (spreadsheetId
-          ? appendWasteRecordRow(spreadsheetId, record)
-          : ensureLinkedSpreadsheet())
-          .then(() => {
-            setLastSyncAt(nowTime());
-            showToast(`Waste point #${record.id} added & saved to Google Sheet.`, 'success');
-          })
-          .catch(() => {
-            showToast(`Waste point #${record.id} saved locally (reconnect Google Sheet to sync).`, 'info');
-          });
-        return;
-      }
-
-      showToast(`Waste point added. ID: ${record.id}`, 'success');
+      if (isAdmin) logAdminOp('Added waste point', `#${record.id} (${record.area})`);
+      showToast(`Waste point #${record.id} scheduled.`, 'success');
     } else {
       showToast('Could not add waste record.', 'error');
     }
   }
 
   function handleUpdateWaste(id: number, amountKg: number, urgency: PriorityLevel, notes: string) {
+    if (!requireAdminGuard('edit waste collection records')) return;
     const node = wasteListRef.current.find(id);
     if (!node) {
       showToast(`Waste record ${id} not found.`, 'error');
@@ -582,39 +578,61 @@ export default function App() {
     node.data.urgency = urgency;
     node.data.notes = sanitizePipeText(notes);
     commitAndSync();
+    logAdminOp('Updated waste point', `#${id}`);
     showToast(`Updated waste record ${id}.`, 'success');
   }
 
   function handleToggleWasteCollected(id: number, collected: boolean) {
+    if (!requireAdminGuard('mark waste pickups collected')) return;
     const node = wasteListRef.current.find(id);
     if (!node) return;
     node.data.collected = collected;
     commitAndSync();
+    logAdminOp(collected ? 'Collected waste point' : 'Reopened waste point', `#${id}`);
     showToast(`Waste point ${id} marked ${collected ? 'Collected' : 'Pending'}.`, 'success');
   }
 
-  function handleDeleteWaste(id: number) {
+  function handleDeleteWaste(id: number, allowOwner = false) {
+    const node = wasteListRef.current.find(id);
+    if (!node) {
+      showToast(`Waste record ${id} not found.`, 'error');
+      return;
+    }
+    const ownsRecord =
+      allowOwner &&
+      currentUser &&
+      !node.data.collected &&
+      (node.data.ownerEmail?.toLowerCase() === currentUser.email.toLowerCase() ||
+        node.data.submittedBy === currentUser.name);
+
+    if (!isAdmin && !ownsRecord) {
+      requireAdminGuard('delete waste records');
+      return;
+    }
     if (wasteListRef.current.remove(id)) {
       commitAndSync();
+      if (isAdmin) logAdminOp('Deleted waste point', `#${id}`);
       showToast(`Waste record ${id} deleted.`, 'info');
-    } else {
-      showToast(`Waste record ${id} not found.`, 'error');
     }
   }
 
   function handleProcessNextPickup(id: number) {
+    if (!requireAdminGuard('dispatch Max-Heap waste pickups')) return;
     const node = wasteListRef.current.find(id);
     if (!node) return;
     node.data.collected = true;
     commitAndSync();
+    logAdminOp('Dispatched Max-Heap pickup', `#${id} (${node.data.area})`);
     showToast(`Collected ID ${id} (${node.data.area}).`, 'success');
   }
 
   // ---------------- ROAD GRAPH HANDLERS ----------------
 
   function handleAddRoad(a: number, b: number, km: number) {
+    if (!requireAdminGuard('modify city road links')) return;
     if (graphRef.current.addRoad(a, b, km)) {
       commitAndSync();
+      logAdminOp('Saved road link', `${a}<->${b} (${km} km)`);
       showToast(`Road saved (${km} km).`, 'success');
     } else {
       showToast('Invalid road connection or distance.', 'error');
@@ -622,8 +640,10 @@ export default function App() {
   }
 
   function handleUpdateRoad(a: number, b: number, km: number) {
+    if (!requireAdminGuard('update city road distances')) return;
     if (graphRef.current.updateRoad(a, b, km)) {
       commitAndSync();
+      logAdminOp('Updated road distance', `${a}<->${b} (${km} km)`);
       showToast(`Road distance updated (${km} km).`, 'success');
     } else {
       showToast('Road not found.', 'error');
@@ -631,8 +651,10 @@ export default function App() {
   }
 
   function handleDeleteRoad(a: number, b: number) {
+    if (!requireAdminGuard('delete city road links')) return;
     if (graphRef.current.deleteRoad(a, b)) {
       commitAndSync();
+      logAdminOp('Deleted road link', `${a}<->${b}`);
       showToast('Road connection deleted.', 'info');
     } else {
       showToast('Road not found.', 'error');
@@ -640,8 +662,10 @@ export default function App() {
   }
 
   function handleLoadDemoRoads() {
+    if (!requireAdminGuard('reset the road network')) return;
     graphRef.current.loadDemo();
     commitAndSync();
+    logAdminOp('Reset road network', '12 Rajshahi links');
     showToast('Restored 12 demo Rajshahi road links.', 'success');
   }
 
@@ -649,246 +673,434 @@ export default function App() {
   const wasteRecords = wasteListRef.current.toArray();
   const queueSnapshot = queueRef.current.getSnapshot();
   const undoItems = undoRef.current.getItems();
-  const activeNavLabel = NAV_ITEMS.find((n) => n.id === activeTab)?.label ?? 'Dashboard';
 
-  return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex overflow-x-hidden">
-      {/* Mobile Sidebar Backdrop */}
-      {mobileNavOpen && (
-        <div
-          className="fixed inset-0 z-30 bg-slate-900/35 backdrop-blur-xs lg:hidden"
-          onClick={() => setMobileNavOpen(false)}
-        />
-      )}
+  const pendingReportsCount = reports.filter((r) => !r.resolved).length;
+  const pendingWasteCount = wasteRecords.filter((w) => !w.collected).length;
 
-      {/* Left Workspace Sidebar (256px) */}
-      <aside
-        aria-label="Primary Sidebar Navigation"
-        className={`fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200 flex flex-col justify-between transition-transform duration-150 lg:static lg:translate-x-0 ${
-          mobileNavOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-      >
-        <div>
-          <div className="h-16 px-5 border-b border-slate-200 flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-md bg-blue-700 text-white flex items-center justify-center font-bold text-sm shadow-xs">
-                U
-              </div>
-              <span className="text-base font-bold tracking-tight text-slate-900 whitespace-nowrap">
-                URBANA
-              </span>
-            </div>
+  const visibleNavItems = useMemo(
+    () => NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin),
+    [isAdmin],
+  );
+
+  const filteredNavItems = useMemo(() => {
+    const q = sidebarSearch.trim().toLowerCase();
+    if (!q) return visibleNavItems;
+    return visibleNavItems.filter(
+      (item) => item.label.toLowerCase().includes(q) || item.id.toLowerCase().includes(q),
+    );
+  }, [sidebarSearch, visibleNavItems]);
+
+  const activeNavMeta = visibleNavItems.find((item) => item.id === activeTab) ?? visibleNavItems[0];
+
+  function renderSidebarContent(isMobile = false) {
+    return (
+      <div className="flex flex-col justify-between h-full">
+        <div className="space-y-5">
+          {/* Brand Row */}
+          <div className="flex items-center justify-between gap-2 px-1">
             <button
-              onClick={() => setMobileNavOpen(false)}
-              className="p-1.5 text-slate-500 hover:text-slate-900 rounded-md lg:hidden"
-              aria-label="Close navigation menu"
+              type="button"
+              onClick={() => {
+                setActiveTab('overview');
+                if (isMobile) setMobileNavOpen(false);
+              }}
+              className="flex items-center gap-2.5 text-left"
             >
-              <X className="w-5 h-5" />
+              <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-800 text-white flex items-center justify-center font-bold text-xs tracking-tight shadow-sm">
+                UR
+              </span>
+              <div>
+                <div className="text-base font-bold tracking-tight text-slate-900 dark:text-zinc-100 leading-none">
+                  URBANA
+                </div>
+                <div className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
+                  Rajshahi Smart City
+                </div>
+              </div>
             </button>
+
+            {isMobile && (
+              <button
+                type="button"
+                onClick={() => setMobileNavOpen(false)}
+                className="p-1.5 text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white rounded-lg"
+                aria-label="Close navigation menu"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
           </div>
 
-          <div className="px-5 pt-5 pb-2">
-            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-              Control Modules
-            </p>
+          {/* Search Modules Input (OripioFin ⌘K style) */}
+          <div className="relative">
+            <Search
+              className="w-3.5 h-3.5 text-slate-400 dark:text-zinc-500 absolute left-3 top-2.5"
+              aria-hidden="true"
+            />
+            <input
+              ref={!isMobile ? searchInputRef : undefined}
+              type="text"
+              value={sidebarSearch}
+              onChange={(e) => setSidebarSearch(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && filteredNavItems.length > 0) {
+                  setActiveTab(filteredNavItems[0].id);
+                  if (isMobile) setMobileNavOpen(false);
+                }
+              }}
+              placeholder="Search modules"
+              aria-label="Search URBANA modules"
+              className="w-full h-9 pl-8 pr-12 text-xs bg-slate-50 dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 border border-slate-200 dark:border-zinc-800 rounded-xl"
+            />
+            <span className="pointer-events-none absolute right-2.5 top-2 px-1.5 py-0.5 text-[10px] font-mono text-slate-400 dark:text-zinc-500 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded">
+              ⌘K
+            </span>
           </div>
 
-          <nav className="px-3 space-y-1">
-            {NAV_ITEMS.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeTab === item.id;
+          {/* Grouped Navigation */}
+          <nav aria-label={isMobile ? 'Mobile Navigation' : 'Primary Navigation'} className="space-y-4">
+            {NAV_GROUPS.map((group) => {
+              const items = filteredNavItems.filter((item) => item.group === group);
+              if (items.length === 0) return null;
               return (
-                <button
-                  key={item.id}
-                  onClick={() => {
-                    setActiveTab(item.id);
-                    setMobileNavOpen(false);
-                  }}
-                  aria-current={isActive ? 'page' : undefined}
-                  className={`group w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
-                    isActive
-                      ? 'bg-blue-50/90 text-blue-900'
-                      : 'text-slate-700 hover:bg-slate-100/80 hover:text-slate-900'
-                  }`}
-                >
-                  <GlassIcon
-                    tone={isActive ? item.tone : 'slate'}
-                    size="sm"
-                    active={isActive}
-                  >
-                    <Icon className="w-4 h-4" aria-hidden="true" />
-                  </GlassIcon>
-                  <div className="min-w-0">
-                    <div className="text-sm font-medium leading-tight truncate">{item.label}</div>
-                    <div className="text-[11px] text-slate-500 truncate mt-0.5">{item.subtitle}</div>
+                <div key={group} className="space-y-1">
+                  <div className="px-2.5 text-[10px] font-semibold tracking-wider text-slate-400 dark:text-zinc-500 uppercase">
+                    {group}
                   </div>
-                </button>
+                  <div className="space-y-0.5">
+                    {items.map((item) => {
+                      const Icon = item.icon;
+                      const isActive = activeTab === item.id;
+                      const badgeCount =
+                        item.id === 'citypulse'
+                          ? pendingReportsCount
+                          : item.id === 'wastex'
+                            ? pendingWasteCount
+                            : null;
+
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => {
+                            setActiveTab(item.id);
+                            if (isMobile) setMobileNavOpen(false);
+                          }}
+                          aria-current={isActive ? 'page' : undefined}
+                          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition-colors ${
+                            isActive
+                              ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 shadow-xs'
+                              : 'text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-900 hover:text-slate-900 dark:hover:text-zinc-100'
+                          }`}
+                        >
+                          <span className="flex items-center gap-2.5 min-w-0">
+                            <Icon className="w-4 h-4 shrink-0" aria-hidden="true" />
+                            <span className="truncate">{item.label}</span>
+                          </span>
+
+                          <span className="flex items-center gap-1.5 shrink-0">
+                            {badgeCount !== null && badgeCount > 0 && (
+                              <span
+                                className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono tabular-nums ${
+                                  isActive
+                                    ? 'bg-white/15 dark:bg-zinc-900/15 text-white dark:text-zinc-950'
+                                    : 'bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300'
+                                }`}
+                              >
+                                {badgeCount}
+                              </span>
+                            )}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               );
             })}
           </nav>
         </div>
 
-        {/* Account & Team Footer */}
-        <div className="p-4 border-t border-slate-200 space-y-3">
-          {currentUser ? (
-            <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 space-y-2">
-              <div className="flex items-center gap-2 min-w-0">
-                <UserCheck className="w-4 h-4 text-blue-700 shrink-0" aria-hidden="true" />
-                <div className="min-w-0">
-                  <div className="text-xs font-semibold text-slate-900 truncate">{currentUser.name}</div>
-                  <div className="text-[11px] text-slate-500 truncate">{currentUser.email}</div>
+        {/* Bottom Session Status Card (No duplicate Admin Plan buttons) */}
+        <div className="pt-4 mt-4 border-t border-slate-200 dark:border-zinc-800">
+          <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-zinc-900/90 border border-slate-200/80 dark:border-zinc-800 space-y-2.5">
+            {currentUser ? (
+              <>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-900 dark:text-zinc-100 truncate">
+                    {isAdmin ? (
+                      <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" aria-hidden="true" />
+                    ) : (
+                      <UserCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" aria-hidden="true" />
+                    )}
+                    <span className="truncate">{currentUser.name}</span>
+                  </span>
+                  <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 shrink-0">
+                    {isAdmin ? '1/1 Admin' : 'Customer'}
+                  </span>
                 </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => void handleSignOutAccount()}
-                className="w-full inline-flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-100 rounded transition-colors"
-              >
-                <LogOut className="w-3 h-3" aria-hidden="true" />
-                <span>Sign Out</span>
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-1.5">
-              <button
-                type="button"
-                onClick={() => {
-                  setAuthModalMode('register');
-                  setAuthModalOpen(true);
-                  setMobileNavOpen(false);
-                }}
-                className="inline-flex items-center justify-center gap-1 py-2 px-2 text-[11px] font-medium text-white bg-blue-700 hover:bg-blue-800 rounded-md transition-colors whitespace-nowrap"
-              >
-                <UserPlus className="w-3 h-3" aria-hidden="true" />
-                <span>Sign Up</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setAuthModalMode('login');
-                  setAuthModalOpen(true);
-                  setMobileNavOpen(false);
-                }}
-                className="inline-flex items-center justify-center gap-1 py-2 px-2 text-[11px] font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors whitespace-nowrap"
-              >
-                <LogIn className="w-3 h-3" aria-hidden="true" />
-                <span>Sign In</span>
-              </button>
-            </div>
-          )}
-
-          <div className="text-xs text-slate-500 space-y-0.5">
-            <div className="font-semibold text-slate-800">Team AetherCore</div>
-            <div>Rajshahi Smart City · CSE 2103</div>
+                <div className="text-[11px] text-slate-500 dark:text-zinc-400 truncate">
+                  {currentUser.email}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void handleSignOutAccount();
+                    if (isMobile) setMobileNavOpen(false);
+                  }}
+                  className="w-full py-1.5 px-2 text-[11px] font-medium bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 border border-slate-200 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-700 rounded-lg transition-colors whitespace-nowrap"
+                >
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="space-y-0.5">
+                  <div className="text-xs font-semibold text-slate-900 dark:text-zinc-100">
+                    Citizen Account
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-zinc-400 leading-snug">
+                    Sign up or sign in to submit and track requests.
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthModalMode('register');
+                      setAuthModalOpen(true);
+                      if (isMobile) setMobileNavOpen(false);
+                    }}
+                    className="py-1.5 px-2 text-[11px] font-semibold bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg transition-colors whitespace-nowrap"
+                  >
+                    Sign Up
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthModalMode('login');
+                      setAuthModalOpen(true);
+                      if (isMobile) setMobileNavOpen(false);
+                    }}
+                    className="py-1.5 px-2 text-[11px] font-medium bg-white dark:bg-zinc-800 text-slate-800 dark:text-zinc-200 border border-slate-200 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-700 rounded-lg transition-colors whitespace-nowrap"
+                  >
+                    Sign In
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#F6F7F8] dark:bg-[#09090B] text-slate-900 dark:text-zinc-100 flex overflow-x-hidden transition-colors duration-150">
+      {/* Desktop Fixed Left Sidebar (OripioFin style) */}
+      <aside
+        aria-label="Primary Sidebar"
+        className="hidden lg:flex lg:w-64 lg:shrink-0 lg:flex-col bg-white dark:bg-[#0C0E12] border-r border-slate-200 dark:border-zinc-800/90 p-4 sticky top-0 h-screen overflow-y-auto"
+      >
+        {renderSidebarContent(false)}
+      </aside>
+
+      {/* Mobile Drawer Backdrop */}
+      {mobileNavOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-slate-900/50 dark:bg-black/75 backdrop-blur-xs lg:hidden"
+          onClick={() => setMobileNavOpen(false)}
+        />
+      )}
+
+      {/* Mobile Slide-Over Sidebar */}
+      <aside
+        aria-label="Mobile Sidebar"
+        className={`fixed inset-y-0 left-0 z-50 w-72 bg-white dark:bg-[#0C0E12] border-r border-slate-200 dark:border-zinc-800 p-4 overflow-y-auto transition-transform duration-150 lg:hidden ${
+          mobileNavOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        {renderSidebarContent(true)}
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Sticky Translucent Top Header */}
-        <header className="h-16 bg-white/85 backdrop-blur-md border-b border-slate-200/90 px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-3 sticky top-0 z-20">
-          <div className="flex items-center gap-2.5 min-w-0">
+      <div className="flex-1 min-w-0 flex flex-col">
+        {/* Clean Top Utility Bar */}
+        <header className="h-16 bg-white dark:bg-[#0C0E12] border-b border-slate-200 dark:border-zinc-800/90 px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4 sticky top-0 z-30">
+          {/* Left: Mobile Toggle + Breadcrumb */}
+          <div className="flex items-center gap-3 min-w-0">
             <button
+              type="button"
               onClick={() => setMobileNavOpen(true)}
-              className="p-2 -ml-1 text-slate-600 hover:text-slate-900 rounded-md lg:hidden shrink-0"
+              className="p-2 -ml-2 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-900 rounded-lg lg:hidden"
               aria-label="Open navigation menu"
             >
               <Menu className="w-5 h-5" />
             </button>
-            <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm min-w-0">
-              <span className="text-slate-500 hidden sm:inline whitespace-nowrap">URBANA</span>
-              <ChevronRight className="w-4 h-4 text-slate-400 hidden sm:inline shrink-0" aria-hidden="true" />
-              <span className="font-semibold text-slate-900 truncate">{activeNavLabel}</span>
-            </nav>
+
+            <div className="flex items-center gap-2 text-xs min-w-0">
+              <button
+                type="button"
+                onClick={() => setActiveTab('overview')}
+                className="font-medium text-slate-400 dark:text-zinc-500 hover:text-slate-900 dark:hover:text-zinc-200 whitespace-nowrap"
+              >
+                URBANA
+              </button>
+              <ChevronRight className="w-3.5 h-3.5 text-slate-300 dark:text-zinc-600 shrink-0" aria-hidden="true" />
+              <span className="font-semibold text-slate-900 dark:text-zinc-100 truncate">
+                {activeNavMeta.label}
+              </span>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={() => setActiveTab('sheets')}
-              className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border transition-colors whitespace-nowrap ${
-                hasGoogleToken && spreadsheetId
-                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100'
-                  : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'
-              }`}
+          {/* Right: 2-Theme Switcher (White | Black) + Auth Chip + Primary Action */}
+          <div className="flex items-center gap-2.5 shrink-0">
+            {/* White & Black Theme Switcher */}
+            <div
+              role="group"
+              aria-label="Theme selector"
+              className="inline-flex items-center gap-0.5 p-1 rounded-xl bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800"
             >
-              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" aria-hidden="true" />
-              <span>{hasGoogleToken && spreadsheetId ? 'Sheet Linked' : 'Google Sheet'}</span>
-            </button>
+              <button
+                type="button"
+                onClick={() => setTheme('white')}
+                aria-pressed={theme === 'white'}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+                  theme === 'white'
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-200'
+                }`}
+              >
+                <Sun className="w-3.5 h-3.5" aria-hidden="true" />
+                <span className="hidden sm:inline">White</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setTheme('black')}
+                aria-pressed={theme === 'black'}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+                  theme === 'black'
+                    ? 'bg-zinc-950 text-white border border-zinc-700 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                <Moon className="w-3.5 h-3.5" aria-hidden="true" />
+                <span className="hidden sm:inline">Black</span>
+              </button>
+            </div>
 
             {currentUser ? (
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-slate-100 text-xs text-slate-800">
-                <UserCheck className="w-3.5 h-3.5 text-blue-700 shrink-0" aria-hidden="true" />
-                <span className="font-medium max-w-[120px] truncate">{currentUser.name}</span>
+              <div className="hidden sm:inline-flex items-center gap-2 pl-2.5 pr-1.5 py-1 rounded-xl bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-xs">
+                {isAdmin ? (
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400 shrink-0" aria-hidden="true" />
+                ) : (
+                  <UserCheck className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400 shrink-0" aria-hidden="true" />
+                )}
+                <span className="font-medium text-slate-800 dark:text-zinc-200 max-w-[100px] truncate">
+                  {currentUser.name}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void handleSignOutAccount()}
+                  aria-label="Sign out"
+                  title="Sign out"
+                  className="p-1 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-white dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-white transition-colors"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
               </div>
             ) : (
               <button
                 type="button"
                 onClick={() => {
-                  setAuthModalMode('register');
+                  setAuthModalMode('login');
                   setAuthModalOpen(true);
                 }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-700 hover:bg-blue-800 rounded-md transition-colors whitespace-nowrap"
+                className="hidden sm:inline-flex items-center gap-1.5 h-9 px-3 rounded-xl bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-xs font-medium text-slate-800 dark:text-zinc-200 hover:bg-slate-200 dark:hover:bg-zinc-800 transition-colors whitespace-nowrap"
               >
-                <UserPlus className="w-3.5 h-3.5" aria-hidden="true" />
-                <span>Create Account</span>
+                <LogIn className="w-3.5 h-3.5" aria-hidden="true" />
+                <span>Sign In</span>
               </button>
             )}
+
+            <button
+              type="button"
+              onClick={() =>
+                activeTab === 'overview'
+                  ? handleExportReportCsv()
+                  : setActiveTab('customer')
+              }
+              className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold shadow-xs transition-colors whitespace-nowrap"
+            >
+              {activeTab === 'overview' ? (
+                <>
+                  <Download className="w-3.5 h-3.5" aria-hidden="true" />
+                  <span className="hidden md:inline">Export Report</span>
+                </>
+              ) : (
+                <>
+                  <Plus className="w-3.5 h-3.5" aria-hidden="true" />
+                  <span className="hidden md:inline">New Request</span>
+                </>
+              )}
+            </button>
           </div>
         </header>
 
-        {/* Action Toast Banner */}
-        <AnimatePresence>
-          {toast && (
-            <motion.div
-              key={toast.id}
-              initial={{ opacity: 0, y: -6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.15 }}
-              role="status"
-              aria-live="polite"
-              className={`mx-4 sm:mx-6 lg:mx-8 mt-4 px-4 py-2.5 text-xs rounded-md border flex items-center justify-between gap-4 shadow-xs ${
-                toast.type === 'error'
-                  ? 'bg-red-50 border-red-200 text-red-900'
-                  : toast.type === 'info'
-                    ? 'bg-slate-900 border-slate-900 text-white'
-                    : 'bg-emerald-50 border-emerald-200 text-emerald-900'
-              }`}
-            >
-              <div className="flex items-center gap-2 min-w-0">
-                {toast.type === 'error' ? (
-                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0" aria-hidden="true" />
-                ) : toast.type === 'info' ? (
-                  <Info className="w-4 h-4 text-blue-400 shrink-0" aria-hidden="true" />
-                ) : (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" aria-hidden="true" />
-                )}
-                <span className="font-medium truncate">{toast.message}</span>
-              </div>
-              <button
-                onClick={() => setToast(null)}
-                className="opacity-70 hover:opacity-100 shrink-0"
-                aria-label="Dismiss notification"
+        {/* Main Workspace Body */}
+        <main className="flex-1 w-full max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          {/* Toast Banner */}
+          <AnimatePresence>
+            {toast && (
+              <motion.div
+                key={toast.id}
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.15 }}
+                role="status"
+                aria-live="polite"
+                className={`mb-5 px-4 py-2.5 text-xs rounded-xl border flex items-center justify-between gap-4 shadow-sm ${
+                  toast.type === 'error'
+                    ? 'bg-red-50 dark:bg-red-950/60 border-red-200 dark:border-red-900 text-red-900 dark:text-red-200'
+                    : toast.type === 'info'
+                      ? 'bg-zinc-900 dark:bg-zinc-100 border-zinc-900 dark:border-zinc-200 text-white dark:text-zinc-950'
+                      : 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-900 text-emerald-900 dark:text-emerald-200'
+                }`}
               >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                <div className="flex items-center gap-2 min-w-0">
+                  {toast.type === 'error' ? (
+                    <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" aria-hidden="true" />
+                  ) : toast.type === 'info' ? (
+                    <Info className="w-4 h-4 text-emerald-400 dark:text-emerald-700 shrink-0" aria-hidden="true" />
+                  ) : (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" aria-hidden="true" />
+                  )}
+                  <span className="font-medium truncate">{toast.message}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setToast(null)}
+                  className="opacity-70 hover:opacity-100 shrink-0"
+                  aria-label="Dismiss notification"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-        {/* Active Module Viewport */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-[1360px] w-full mx-auto">
           {!isHydrated ? (
             <div className="space-y-6 animate-pulse">
-              <div className="h-8 w-64 bg-slate-200 rounded" />
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                {[0, 1, 2, 3].map((i) => (
-                  <div key={i} className="h-28 bg-white border border-slate-200 rounded-lg" />
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                {[0, 1, 2].map((i) => (
+                  <div
+                    key={i}
+                    className="h-44 bg-white dark:bg-[#111316] border border-slate-200 dark:border-zinc-800 rounded-2xl"
+                  />
                 ))}
               </div>
-              <div className="h-80 bg-white border border-slate-200 rounded-lg" />
+              <div className="h-80 bg-white dark:bg-[#111316] border border-slate-200 dark:border-zinc-800 rounded-2xl" />
             </div>
           ) : (
             <motion.div
@@ -899,17 +1111,39 @@ export default function App() {
             >
               {activeTab === 'overview' && (
                 <CombinedDashboard
+                  currentUser={currentUser}
                   reports={reports}
                   wasteRecords={wasteRecords}
                   graph={graphRef.current}
                   queueSize={queueSnapshot.count}
                   undoSize={undoItems.length}
+                  isDark={isDark}
+                  onExportCsv={handleExportReportCsv}
                   onNavigate={setActiveTab}
+                />
+              )}
+
+              {activeTab === 'customer' && (
+                <CustomerHubView
+                  currentUser={currentUser}
+                  systemSettings={systemSettings}
+                  reports={reports}
+                  wasteRecords={wasteRecords}
+                  graph={graphRef.current}
+                  onAddReport={handleAddCityReport}
+                  onDeleteOwnReport={(id) => handleDeleteCityReport(id, true)}
+                  onAddWaste={handleAddWaste}
+                  onDeleteOwnWaste={(id) => handleDeleteWaste(id, true)}
+                  onOpenAuth={(mode) => {
+                    setAuthModalMode(mode);
+                    setAuthModalOpen(true);
+                  }}
                 />
               )}
 
               {activeTab === 'citypulse' && (
                 <CityPulseView
+                  isAdmin={isAdmin}
                   reports={reports}
                   queueSnapshot={queueSnapshot}
                   undoItems={undoItems}
@@ -917,7 +1151,7 @@ export default function App() {
                   onAddReport={handleAddCityReport}
                   onUpdateReport={handleUpdateCityReport}
                   onToggleResolved={handleToggleCityResolved}
-                  onDeleteReport={handleDeleteCityReport}
+                  onDeleteReport={(id) => handleDeleteCityReport(id, false)}
                   onProcessNextComplaint={handleProcessNextComplaint}
                   onUndoLastAction={handleUndoLastCityAction}
                   onTraceSearchById={(id) => cityListRef.current.traceFind(id)}
@@ -926,11 +1160,12 @@ export default function App() {
 
               {activeTab === 'wastex' && (
                 <WasteXView
+                  isAdmin={isAdmin}
                   records={wasteRecords}
                   onAddWaste={handleAddWaste}
                   onUpdateWaste={handleUpdateWaste}
                   onToggleCollected={handleToggleWasteCollected}
-                  onDeleteWaste={handleDeleteWaste}
+                  onDeleteWaste={(id) => handleDeleteWaste(id, false)}
                   onTraceSearchById={(id) => wasteListRef.current.traceFind(id)}
                 />
               )}
@@ -938,6 +1173,8 @@ export default function App() {
               {activeTab === 'scheduler' && (
                 <SchedulerView
                   wasteRecords={wasteRecords}
+                  isDark={isDark}
+                  isAdmin={isAdmin}
                   onProcessNextPickup={handleProcessNextPickup}
                 />
               )}
@@ -945,6 +1182,8 @@ export default function App() {
               {activeTab === 'roads' && (
                 <RoadNetworkView
                   graph={graphRef.current}
+                  isDark={isDark}
+                  isAdmin={isAdmin}
                   onAddRoad={handleAddRoad}
                   onUpdateRoad={handleUpdateRoad}
                   onDeleteRoad={handleDeleteRoad}
@@ -952,19 +1191,42 @@ export default function App() {
                 />
               )}
 
-              {activeTab === 'sheets' && (
-                <GoogleSheetsView
+              {activeTab === 'admin' && isAdmin && (
+                <AdminPanelView
+                  currentUser={currentUser}
+                  adminName={adminName}
                   reports={reports}
                   wasteRecords={wasteRecords}
-                  googleUser={googleUser}
-                  hasGoogleToken={hasGoogleToken}
-                  spreadsheetId={spreadsheetId}
-                  spreadsheetTitle={spreadsheetTitle}
-                  lastSyncAt={lastSyncAt}
-                  isBusy={isSheetBusy}
-                  onGoogleSignIn={handleGoogleSignIn}
-                  onGoogleSignOut={handleGoogleSignOut}
-                  onSyncAll={handleSyncAllToSheet}
+                  queueSnapshot={queueSnapshot}
+                  systemSettings={systemSettings}
+                  onSettingsUpdated={setSystemSettings}
+                  onOpenSignIn={() => {
+                    setAuthModalMode('login');
+                    setAuthModalOpen(true);
+                  }}
+                  onProcessNextComplaint={handleProcessNextComplaint}
+                  onToggleCityResolved={handleToggleCityResolved}
+                  onDeleteCityReport={(id) => handleDeleteCityReport(id, false)}
+                  onProcessNextPickup={handleProcessNextPickup}
+                  onToggleWasteCollected={handleToggleWasteCollected}
+                  onDeleteWasteRecord={(id) => handleDeleteWaste(id, false)}
+                  onLoadDemoRoads={handleLoadDemoRoads}
+                  onRecordAudit={logAdminOp}
+                  onNotify={showToast}
+                />
+              )}
+
+              {activeTab === 'admin' && !isAdmin && (
+                <CombinedDashboard
+                  currentUser={currentUser}
+                  reports={reports}
+                  wasteRecords={wasteRecords}
+                  graph={graphRef.current}
+                  queueSize={queueSnapshot.count}
+                  undoSize={undoItems.length}
+                  isDark={isDark}
+                  onExportCsv={handleExportReportCsv}
+                  onNavigate={setActiveTab}
                 />
               )}
 
@@ -974,12 +1236,13 @@ export default function App() {
         </main>
       </div>
 
-      {/* Create Account / Sign In Modal */}
+      {/* Create Customer Account / Sign In Modal */}
       <AuthModal
         open={authModalOpen}
         initialMode={authModalMode}
+        adminClaimed={adminClaimed}
         onClose={() => setAuthModalOpen(false)}
-        onSuccess={(user, mode) => void handleAuthSuccess(user, mode)}
+        onSuccess={handleAuthSuccess}
       />
     </div>
   );

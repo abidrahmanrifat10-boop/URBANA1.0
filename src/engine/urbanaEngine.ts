@@ -97,6 +97,7 @@ export interface CityReport {
   priority: PriorityLevel;
   resolved: boolean;
   submittedBy?: string;
+  ownerEmail?: string;
   createdAt?: string;
 }
 
@@ -109,6 +110,7 @@ export interface WasteRecord {
   urgency: PriorityLevel;
   collected: boolean;
   submittedBy?: string;
+  ownerEmail?: string;
   createdAt?: string;
 }
 
@@ -894,7 +896,7 @@ export function serializeCityReports(reports: CityReport[]): string {
   return reports
     .map(
       (r) =>
-        `${r.id}|${r.area}|${r.category}|${sanitizePipeText(r.description)}|${r.priority}|${r.resolved ? 1 : 0}|${sanitizePipeText(r.submittedBy ?? '')}|${sanitizePipeText(r.createdAt ?? '')}`,
+        `${r.id}|${r.area}|${r.category}|${sanitizePipeText(r.description)}|${r.priority}|${r.resolved ? 1 : 0}|${sanitizePipeText(r.submittedBy ?? '')}|${sanitizePipeText(r.createdAt ?? '')}|${sanitizePipeText(r.ownerEmail ?? '')}`,
     )
     .join('\n');
 }
@@ -909,7 +911,7 @@ export function parseCityReports(
 
   for (const line of content.split(/\r?\n/)) {
     if (!line.trim()) continue;
-    const fld = splitFields(line, 8);
+    const fld = splitFields(line, 9);
     if (fld.length < 6) {
       skipped++;
       continue;
@@ -939,6 +941,7 @@ export function parseCityReports(
         resolved,
         submittedBy: fld[6] || undefined,
         createdAt: fld[7] || undefined,
+        ownerEmail: fld[8] || undefined,
       });
       if (id >= nextId) nextId = id + 1;
     } else {
@@ -952,7 +955,7 @@ export function serializeWasteRecords(records: WasteRecord[]): string {
   return records
     .map(
       (r) =>
-        `${r.id}|${r.area}|${r.wasteType}|${r.amountKg}|${r.urgency}|${sanitizePipeText(r.notes)}|${r.collected ? 1 : 0}|${sanitizePipeText(r.submittedBy ?? '')}|${sanitizePipeText(r.createdAt ?? '')}`,
+        `${r.id}|${r.area}|${r.wasteType}|${r.amountKg}|${r.urgency}|${sanitizePipeText(r.notes)}|${r.collected ? 1 : 0}|${sanitizePipeText(r.submittedBy ?? '')}|${sanitizePipeText(r.createdAt ?? '')}|${sanitizePipeText(r.ownerEmail ?? '')}`,
     )
     .join('\n');
 }
@@ -967,7 +970,7 @@ export function parseWasteRecords(
 
   for (const line of content.split(/\r?\n/)) {
     if (!line.trim()) continue;
-    const fld = splitFields(line, 9);
+    const fld = splitFields(line, 10);
     if (fld.length < 7) {
       skipped++;
       continue;
@@ -1001,6 +1004,7 @@ export function parseWasteRecords(
         collected,
         submittedBy: fld[7] || undefined,
         createdAt: fld[8] || undefined,
+        ownerEmail: fld[9] || undefined,
       });
       if (id >= nextId) nextId = id + 1;
     } else {

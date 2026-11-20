@@ -27,6 +27,7 @@ import { PriorityLabel, StatusLabel } from './PriorityLabel';
 import { StatCard } from './StatCard';
 
 interface WasteXViewProps {
+  isAdmin?: boolean;
   records: WasteRecord[];
   onAddWaste: (data: Omit<WasteRecord, 'id' | 'collected'>) => void;
   onUpdateWaste: (id: number, amountKg: number, urgency: PriorityLevel, notes: string) => void;
@@ -36,6 +37,7 @@ interface WasteXViewProps {
 }
 
 export function WasteXView({
+  isAdmin = false,
   records,
   onAddWaste,
   onUpdateWaste,
@@ -131,10 +133,10 @@ export function WasteXView({
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <p className="text-xs font-medium text-slate-500">
+          <p className="text-xs font-medium text-slate-500 dark:text-zinc-400">
             WASTEX · Singly Linked List + O(1) Hash Index (211)
           </p>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 mt-1">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-zinc-100 mt-1">
             Waste Collection Management
           </h1>
         </div>
@@ -142,7 +144,7 @@ export function WasteXView({
         <button
           onClick={() => setShowAddForm((prev) => !prev)}
           disabled={records.length >= MAX_RECORDS}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[40px] text-xs font-medium text-white bg-blue-700 hover:bg-blue-800 disabled:opacity-50 rounded-md transition-colors whitespace-nowrap shrink-0 w-fit"
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[40px] text-xs font-medium text-white bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 rounded-xl transition-colors whitespace-nowrap shrink-0 w-fit"
         >
           <Plus className="w-3.5 h-3.5" aria-hidden="true" />
           <span>{showAddForm ? 'Close Form' : 'Add Waste Point'}</span>
@@ -156,19 +158,19 @@ export function WasteXView({
           value={records.length}
           suffix={`/ ${MAX_RECORDS}`}
           icon={<Recycle className="w-4 h-4" aria-hidden="true" />}
-          iconTone="blue"
+          iconTone="emerald"
         />
         <StatCard
           label="Pending"
           value={pendingCount}
-          valueClassName="text-amber-700"
+          valueClassName="text-amber-700 dark:text-amber-400"
           icon={<Clock className="w-4 h-4" aria-hidden="true" />}
           iconTone="amber"
         />
         <StatCard
           label="Collected"
           value={collectedCount}
-          valueClassName="text-emerald-700"
+          valueClassName="text-emerald-700 dark:text-emerald-400"
           icon={<CheckCircle2 className="w-4 h-4" aria-hidden="true" />}
           iconTone="emerald"
         />
@@ -182,7 +184,7 @@ export function WasteXView({
           <StatCard
             label="High/Critical Pending"
             value={highUrgentCount}
-            valueClassName="text-red-700"
+            valueClassName="text-red-700 dark:text-red-400"
             icon={<AlertOctagon className="w-4 h-4" aria-hidden="true" />}
             iconTone="red"
           />
@@ -191,20 +193,20 @@ export function WasteXView({
 
       {showAddForm && (
         <form onSubmit={handleAddSubmit} className="surface-card p-5 sm:p-6 space-y-4">
-          <div className="pb-3 border-b border-slate-100">
-            <h2 className="text-sm font-semibold text-slate-900">Register Waste Collection Point</h2>
+          <div className="pb-3 border-b border-slate-100 dark:border-zinc-800">
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-zinc-100">Register Waste Collection Point</h2>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
-              <label htmlFor="wx-area" className="block text-xs font-medium text-slate-700 mb-1.5">
+              <label htmlFor="wx-area" className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
                 Area
               </label>
               <select
                 id="wx-area"
                 value={area}
                 onChange={(e) => setArea(e.target.value as AreaName)}
-                className="w-full h-10 px-3 text-sm bg-white border border-slate-300 rounded-md"
+                className="w-full h-10 px-3 text-sm bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 border border-slate-300 dark:border-zinc-700 rounded-lg"
               >
                 {AREAS.map((a) => (
                   <option key={a} value={a}>
@@ -215,14 +217,14 @@ export function WasteXView({
             </div>
 
             <div>
-              <label htmlFor="wx-type" className="block text-xs font-medium text-slate-700 mb-1.5">
+              <label htmlFor="wx-type" className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
                 Waste Type
               </label>
               <select
                 id="wx-type"
                 value={wasteType}
                 onChange={(e) => setWasteType(e.target.value as WasteType)}
-                className="w-full h-10 px-3 text-sm bg-white border border-slate-300 rounded-md"
+                className="w-full h-10 px-3 text-sm bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 border border-slate-300 dark:border-zinc-700 rounded-lg"
               >
                 {WASTE_TYPES.map((t) => (
                   <option key={t} value={t}>
@@ -233,7 +235,7 @@ export function WasteXView({
             </div>
 
             <div>
-              <label htmlFor="wx-kg" className="block text-xs font-medium text-slate-700 mb-1.5">
+              <label htmlFor="wx-kg" className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
                 Estimated Amount (kg)
               </label>
               <input
@@ -246,19 +248,19 @@ export function WasteXView({
                   setAmountKg(e.target.value);
                   if (formError) setFormError('');
                 }}
-                className="w-full h-10 px-3 text-sm font-mono tabular-nums bg-white border border-slate-300 rounded-md"
+                className="w-full h-10 px-3 text-sm font-mono tabular-nums bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 border border-slate-300 dark:border-zinc-700 rounded-lg"
               />
             </div>
 
             <div>
-              <label htmlFor="wx-urgency" className="block text-xs font-medium text-slate-700 mb-1.5">
+              <label htmlFor="wx-urgency" className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
                 Urgency (1–4)
               </label>
               <select
                 id="wx-urgency"
                 value={urgency}
                 onChange={(e) => setUrgency(Number(e.target.value) as PriorityLevel)}
-                className="w-full h-10 px-3 text-sm bg-white border border-slate-300 rounded-md"
+                className="w-full h-10 px-3 text-sm bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 border border-slate-300 dark:border-zinc-700 rounded-lg"
               >
                 <option value={1}>1 — Low</option>
                 <option value={2}>2 — Medium</option>
@@ -269,7 +271,7 @@ export function WasteXView({
           </div>
 
           <div>
-            <label htmlFor="wx-notes" className="block text-xs font-medium text-slate-700 mb-1.5">
+            <label htmlFor="wx-notes" className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
               Notes (optional)
             </label>
             <input
@@ -278,10 +280,10 @@ export function WasteXView({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Location landmark or bin access notes..."
-              className="w-full h-10 px-3 text-sm bg-white border border-slate-300 rounded-md"
+              className="w-full h-10 px-3 text-sm bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 border border-slate-300 dark:border-zinc-700 rounded-lg"
             />
             {formError && (
-              <p className="text-xs font-medium text-red-600 mt-1" role="alert">
+              <p className="text-xs font-medium text-red-600 dark:text-red-400 mt-1" role="alert">
                 {formError}
               </p>
             )}
@@ -294,13 +296,13 @@ export function WasteXView({
                 setShowAddForm(false);
                 setFormError('');
               }}
-              className="px-4 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-md"
+              className="px-4 py-2 text-xs font-medium text-slate-700 dark:text-zinc-300 bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 rounded-lg"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-xs font-medium text-white bg-blue-700 hover:bg-blue-800 rounded-md"
+              className="px-4 py-2 text-xs font-medium text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg"
             >
               Add Waste Point
             </button>
@@ -329,49 +331,49 @@ export function WasteXView({
 
       {/* Waste Records Table */}
       <div className="surface-card overflow-hidden">
-        <div className="px-4 sm:px-5 py-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg">
+        <div className="px-4 sm:px-5 py-4 border-b border-slate-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-zinc-900 border border-slate-200/70 dark:border-zinc-800 rounded-xl">
             {(['all', 'pending', 'collected'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setStatusFilter(tab)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors capitalize whitespace-nowrap shrink-0 ${
+                className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors capitalize whitespace-nowrap shrink-0 ${
                   statusFilter === tab
-                    ? 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-white dark:bg-zinc-800 text-slate-900 dark:text-zinc-100 shadow-xs'
+                    : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-200'
                 }`}
               >
                 {tab}
               </button>
             ))}
           </div>
-          <span className="text-xs text-slate-500 font-mono tabular-nums">
+          <span className="text-xs text-slate-500 dark:text-zinc-400 font-mono tabular-nums">
             Showing {filteredRecords.length} of {records.length}
           </span>
         </div>
 
         {filteredRecords.length === 0 ? (
           <div className="p-10 text-center space-y-3">
-            <p className="text-sm font-medium text-slate-800">
+            <p className="text-sm font-medium text-slate-800 dark:text-zinc-200">
               {records.length === 0
                 ? 'No waste collection points registered yet.'
                 : 'No waste records match this filter.'}
             </p>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-500 dark:text-zinc-400">
               Add a Rajshahi collection point to populate WasteX and the Max-Heap Scheduler.
             </p>
             <div className="pt-1 flex justify-center gap-2">
               {records.length > 0 && (
                 <button
                   onClick={() => setStatusFilter('all')}
-                  className="px-3.5 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-md"
+                  className="px-3.5 py-2 text-xs font-medium text-slate-700 dark:text-zinc-200 bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 rounded-lg"
                 >
                   Show All
                 </button>
               )}
               <button
                 onClick={() => setShowAddForm(true)}
-                className="px-3.5 py-2 text-xs font-medium text-white bg-blue-700 hover:bg-blue-800 rounded-md"
+                className="px-3.5 py-2 text-xs font-medium text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg"
               >
                 Add Waste Point
               </button>
@@ -381,7 +383,7 @@ export function WasteXView({
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold text-slate-600">
+                <tr className="border-b border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/70 text-xs font-semibold text-slate-600 dark:text-zinc-400">
                   <th className="py-3 px-4">ID</th>
                   <th className="py-3 px-4">Area</th>
                   <th className="py-3 px-4">Type</th>
@@ -389,22 +391,22 @@ export function WasteXView({
                   <th className="py-3 px-4">Urgency</th>
                   <th className="py-3 px-4">Status</th>
                   <th className="py-3 px-4">Notes</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                  {isAdmin && <th className="py-3 px-4 text-right">Actions</th>}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-sm">
+              <tbody className="divide-y divide-slate-100 dark:divide-zinc-800 text-sm">
                 {filteredRecords.map((r) => {
                   const isEditing = editingId === r.id;
                   return (
-                    <tr key={r.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3 px-4 font-mono tabular-nums font-semibold text-slate-900 whitespace-nowrap">
+                    <tr key={r.id} className="hover:bg-slate-50/80 dark:hover:bg-zinc-900/60 transition-colors">
+                      <td className="py-3 px-4 font-mono tabular-nums font-semibold text-slate-900 dark:text-zinc-100 whitespace-nowrap">
                         {r.id}
                       </td>
-                      <td className="py-3 px-4 font-medium text-slate-800 whitespace-nowrap">
+                      <td className="py-3 px-4 font-medium text-slate-800 dark:text-zinc-200 whitespace-nowrap">
                         {r.area}
                       </td>
-                      <td className="py-3 px-4 text-slate-600 whitespace-nowrap">{r.wasteType}</td>
-                      <td className="py-3 px-4 text-right font-mono tabular-nums text-slate-900 whitespace-nowrap">
+                      <td className="py-3 px-4 text-slate-600 dark:text-zinc-400 whitespace-nowrap">{r.wasteType}</td>
+                      <td className="py-3 px-4 text-right font-mono tabular-nums text-slate-900 dark:text-zinc-100 whitespace-nowrap">
                         {isEditing ? (
                           <div>
                             <input
@@ -417,10 +419,10 @@ export function WasteXView({
                                 if (editError) setEditError('');
                               }}
                               aria-label="Edit weight in kg"
-                              className="w-24 h-8 px-2 text-xs text-right border border-slate-300 rounded"
+                              className="w-24 h-8 px-2 text-xs text-right bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 border border-slate-300 dark:border-zinc-700 rounded"
                             />
                             {editError && (
-                              <p className="text-[11px] text-red-600 mt-1 text-right" role="alert">
+                              <p className="text-[11px] text-red-600 dark:text-red-400 mt-1 text-right" role="alert">
                                 {editError}
                               </p>
                             )}
@@ -435,7 +437,7 @@ export function WasteXView({
                             value={editUrgency}
                             onChange={(e) => setEditUrgency(Number(e.target.value) as PriorityLevel)}
                             aria-label="Edit urgency"
-                            className="h-8 px-2 text-xs border border-slate-300 rounded"
+                            className="h-8 px-2 text-xs bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 border border-slate-300 dark:border-zinc-700 rounded"
                           >
                             <option value={1}>Low</option>
                             <option value={2}>Medium</option>
@@ -449,71 +451,73 @@ export function WasteXView({
                       <td className="py-3 px-4 whitespace-nowrap">
                         <StatusLabel done={r.collected} doneText="Collected" />
                       </td>
-                      <td className="py-3 px-4 text-slate-600 min-w-[200px]">
+                      <td className="py-3 px-4 text-slate-600 dark:text-zinc-400 min-w-[200px]">
                         {isEditing ? (
                           <input
                             type="text"
                             value={editNotes}
                             onChange={(e) => setEditNotes(e.target.value)}
                             aria-label="Edit notes"
-                            className="w-full h-8 px-2 text-xs border border-slate-300 rounded"
+                            className="w-full h-8 px-2 text-xs bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 border border-slate-300 dark:border-zinc-700 rounded"
                           />
                         ) : (
-                          r.notes || <span className="text-slate-400">—</span>
+                          r.notes || <span className="text-slate-400 dark:text-zinc-600">—</span>
                         )}
                       </td>
-                      <td className="py-3 px-4 text-right whitespace-nowrap">
-                        {isEditing ? (
-                          <div className="inline-flex items-center gap-2">
-                            <button
-                              onClick={() => saveEdit(r.id)}
-                              className="px-2.5 py-1.5 text-xs font-medium text-white bg-blue-700 hover:bg-blue-800 rounded"
-                            >
-                              Save
-                            </button>
-                            <button
-                              onClick={() => {
-                                setEditingId(null);
-                                setEditError('');
-                              }}
-                              className="px-2.5 py-1.5 text-xs font-medium text-slate-600"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="inline-flex items-center gap-1">
-                            <button
-                              onClick={() => onToggleCollected(r.id, !r.collected)}
-                              title={r.collected ? 'Reopen collection' : 'Mark collected'}
-                              aria-label={r.collected ? `Reopen waste point ${r.id}` : `Mark waste point ${r.id} collected`}
-                              className="p-2 text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 rounded transition-colors"
-                            >
-                              {r.collected ? (
-                                <RotateCcw className="w-4 h-4" />
-                              ) : (
-                                <CheckCircle2 className="w-4 h-4" />
-                              )}
-                            </button>
-                            <button
-                              onClick={() => startEdit(r)}
-                              title="Update amount, urgency, or notes"
-                              aria-label={`Edit waste point ${r.id}`}
-                              className="p-2 text-slate-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors"
-                            >
-                              <Edit3 className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => setDeleteTarget(r)}
-                              title="Delete waste point"
-                              aria-label={`Delete waste point ${r.id}`}
-                              className="p-2 text-slate-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        )}
-                      </td>
+                      {isAdmin && (
+                        <td className="py-3 px-4 text-right whitespace-nowrap">
+                          {isEditing ? (
+                            <div className="inline-flex items-center gap-2">
+                              <button
+                                onClick={() => saveEdit(r.id)}
+                                className="px-2.5 py-1.5 text-xs font-medium text-white bg-emerald-700 hover:bg-emerald-800 rounded"
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setEditingId(null);
+                                  setEditError('');
+                                }}
+                                className="px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-zinc-400"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="inline-flex items-center gap-1">
+                              <button
+                                onClick={() => onToggleCollected(r.id, !r.collected)}
+                                title={r.collected ? 'Reopen collection' : 'Mark collected'}
+                                aria-label={r.collected ? `Reopen waste point ${r.id}` : `Mark waste point ${r.id} collected`}
+                                className="p-2 text-slate-600 dark:text-zinc-400 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded transition-colors"
+                              >
+                                {r.collected ? (
+                                  <RotateCcw className="w-4 h-4" />
+                                ) : (
+                                  <CheckCircle2 className="w-4 h-4" />
+                                )}
+                              </button>
+                              <button
+                                onClick={() => startEdit(r)}
+                                title="Update amount, urgency, or notes"
+                                aria-label={`Edit waste point ${r.id}`}
+                                className="p-2 text-slate-600 dark:text-zinc-400 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded transition-colors"
+                              >
+                                <Edit3 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => setDeleteTarget(r)}
+                                title="Delete waste point"
+                                aria-label={`Delete waste point ${r.id}`}
+                                className="p-2 text-slate-600 dark:text-zinc-400 hover:text-red-700 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50 rounded transition-colors"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   );
                 })}

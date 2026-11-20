@@ -4,7 +4,7 @@ interface Tilt3DCardProps {
   children: ReactNode;
   className?: string;
   maxTilt?: number;
-  variant?: 'light' | 'dark';
+  variant?: 'light' | 'emerald';
   disabled?: boolean;
   as?: 'div' | 'section' | 'article' | 'aside';
 }
@@ -12,7 +12,7 @@ interface Tilt3DCardProps {
 export function Tilt3DCard({
   children,
   className = '',
-  maxTilt = 3.8,
+  maxTilt = 3.2,
   variant = 'light',
   disabled = false,
   as: Component = 'div',
@@ -77,7 +77,8 @@ export function Tilt3DCard({
     el.style.setProperty('--tilt-glow', '0');
   }
 
-  const baseSurface = variant === 'dark' ? 'surface-card-dark tilt-3d-card-dark' : 'surface-card';
+  const baseSurface = variant === 'emerald' ? 'surface-card-emerald' : 'surface-card';
+  const sheenClass = variant === 'emerald' ? 'tilt-3d-sheen-dark' : 'tilt-3d-sheen';
 
   return (
     <Component
@@ -89,7 +90,7 @@ export function Tilt3DCard({
       {canTilt && (
         <span
           aria-hidden="true"
-          className={`${variant === 'dark' ? 'tilt-3d-sheen-dark' : 'tilt-3d-sheen'} pointer-events-none absolute inset-0 z-0 rounded-[inherit]`}
+          className={`${sheenClass} pointer-events-none absolute inset-0 z-0 rounded-[inherit]`}
         />
       )}
       {children}

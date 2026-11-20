@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
   --font-display: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
@@ -13,8 +14,6 @@
 
   body {
     font-family: var(--font-sans);
-    background-color: #f8fafc;
-    color: #0f172a;
     overflow-x: hidden;
   }
 
@@ -28,7 +27,7 @@
   input:focus-visible,
   select:focus-visible,
   textarea:focus-visible {
-    outline: 2px solid #1d4ed8;
+    outline: 2px solid #0e764e;
     outline-offset: 2px;
   }
 }
@@ -39,48 +38,75 @@
 
 .surface-card {
   background-color: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 0.625rem;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  border: 1px solid #e4e7ec;
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.dark .surface-card {
+  background-color: #111316;
+  border-color: #27272a;
+  box-shadow: 0 4px 18px -6px rgba(0, 0, 0, 0.65);
+}
+
+.surface-card-emerald {
+  background:
+    radial-gradient(240px 180px at 90% 10%, rgba(52, 211, 153, 0.24), transparent 70%),
+    linear-gradient(135deg, #0f7a50 0%, #0a5b3c 55%, #063d28 100%);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: 1rem;
+  box-shadow: 0 10px 24px -10px rgba(6, 61, 40, 0.45);
 }
 
 .surface-card-interactive {
   background-color: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 0.625rem;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-  transition: box-shadow 150ms cubic-bezier(0.16, 1, 0.3, 1), border-color 150ms cubic-bezier(0.16, 1, 0.3, 1), transform 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid #e4e7ec;
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  transition:
+    box-shadow 150ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 150ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 150ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dark .surface-card-interactive {
+  background-color: #111316;
+  border-color: #27272a;
 }
 
 .surface-card-interactive:hover {
   border-color: #cbd5e1;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 6px 16px -6px rgba(15, 23, 42, 0.08);
+}
+
+.dark .surface-card-interactive:hover {
+  border-color: #3f3f46;
 }
 
 .glass-icon {
   box-shadow:
     inset 0 1px 1px rgba(255, 255, 255, 0.92),
     inset 0 -1px 2px rgba(15, 23, 42, 0.05),
-    0 4px 12px -3px rgba(15, 23, 42, 0.12);
+    0 3px 10px -3px rgba(15, 23, 42, 0.12);
+}
+
+.dark .glass-icon {
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.16),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.45),
+    0 4px 12px -4px rgba(0, 0, 0, 0.55);
 }
 
 .glass-icon-dark {
   box-shadow:
-    inset 0 1px 1px rgba(255, 255, 255, 0.22),
+    inset 0 1px 1px rgba(255, 255, 255, 0.24),
     inset 0 -1px 2px rgba(0, 0, 0, 0.35),
-    0 6px 16px -4px rgba(0, 0, 0, 0.55);
+    0 6px 16px -4px rgba(0, 0, 0, 0.45);
 }
 
 .group:hover .glass-icon,
 .group:hover .glass-icon-dark {
   transform: translateY(-1px) scale(1.04);
-}
-
-.surface-card-dark {
-  background-color: #131620;
-  border: 1px solid rgba(148, 163, 184, 0.14);
-  border-radius: 0.75rem;
-  box-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.45);
 }
 
 .tilt-3d-card {
@@ -101,33 +127,41 @@
 .tilt-3d-card:hover {
   border-color: #cbd5e1;
   box-shadow:
-    0 12px 26px -12px rgba(15, 23, 42, 0.14),
-    0 2px 6px rgba(15, 23, 42, 0.04);
+    0 12px 26px -12px rgba(15, 23, 42, 0.12),
+    0 2px 6px rgba(15, 23, 42, 0.03);
 }
 
-.tilt-3d-card-dark:hover {
-  border-color: rgba(129, 140, 248, 0.38);
+.dark .tilt-3d-card:hover {
+  border-color: #3f3f46;
   box-shadow:
-    0 14px 32px -12px rgba(0, 0, 0, 0.75),
-    0 0 0 1px rgba(129, 140, 248, 0.12);
+    0 16px 32px -12px rgba(0, 0, 0, 0.8),
+    0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
 .tilt-3d-sheen {
   opacity: var(--tilt-glow);
   background: radial-gradient(
     320px circle at var(--tilt-mx) var(--tilt-my),
-    rgba(29, 78, 216, 0.065),
+    rgba(15, 118, 78, 0.07),
     rgba(255, 255, 255, 0) 70%
   );
   transition: opacity 220ms ease;
+}
+
+.dark .tilt-3d-sheen {
+  background: radial-gradient(
+    320px circle at var(--tilt-mx) var(--tilt-my),
+    rgba(52, 211, 153, 0.1),
+    rgba(17, 19, 22, 0) 72%
+  );
 }
 
 .tilt-3d-sheen-dark {
   opacity: var(--tilt-glow);
   background: radial-gradient(
     320px circle at var(--tilt-mx) var(--tilt-my),
-    rgba(129, 140, 248, 0.13),
-    rgba(19, 22, 32, 0) 72%
+    rgba(255, 255, 255, 0.14),
+    rgba(10, 91, 60, 0) 72%
   );
   transition: opacity 220ms ease;
 }

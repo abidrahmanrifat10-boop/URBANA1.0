@@ -13,10 +13,12 @@ import { Tilt3DCard } from './Tilt3DCard';
 
 interface SchedulerViewProps {
   wasteRecords: WasteRecord[];
+  isDark?: boolean;
+  isAdmin?: boolean;
   onProcessNextPickup: (id: number) => void;
 }
 
-export function SchedulerView({ wasteRecords, onProcessNextPickup }: SchedulerViewProps) {
+export function SchedulerView({ wasteRecords, isDark = false, isAdmin = false, onProcessNextPickup }: SchedulerViewProps) {
   const [whatIfHeap, setWhatIfHeap] = useState<WasteMaxHeap | null>(null);
   const [simLog, setSimLog] = useState<string>('');
   const [selectedId, setSelectedId] = useState<string>('');
@@ -98,10 +100,10 @@ export function SchedulerView({ wasteRecords, onProcessNextPickup }: SchedulerVi
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <p className="text-xs font-medium text-slate-500">
+          <p className="text-xs font-medium text-slate-500 dark:text-zinc-400">
             SCHEDULER · 1-Based Binary Max Heap (Priority: Urgency → Amount kg → Smaller ID)
           </p>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 mt-1">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-zinc-100 mt-1">
             Waste Collection Scheduler
           </h1>
         </div>
@@ -110,25 +112,27 @@ export function SchedulerView({ wasteRecords, onProcessNextPickup }: SchedulerVi
           {isSimulating && (
             <button
               onClick={resetSimulation}
-              className="inline-flex items-center gap-2 px-3.5 py-2.5 min-h-[40px] text-xs font-medium text-amber-800 bg-amber-50 border border-amber-300 hover:bg-amber-100 rounded-md transition-colors whitespace-nowrap shrink-0"
+              className="inline-flex items-center gap-2 px-3.5 py-2.5 min-h-[40px] text-xs font-medium text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-950 rounded-xl transition-colors whitespace-nowrap shrink-0"
             >
               <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
               <span>Reset What-If Plan</span>
             </button>
           )}
-          <button
-            onClick={handleProcessRealPickup}
-            disabled={liveHeap.size() === 0}
-            className="inline-flex items-center gap-2 px-4 py-2.5 min-h-[40px] text-xs font-medium text-white bg-blue-700 hover:bg-blue-800 disabled:opacity-45 disabled:cursor-not-allowed rounded-md transition-colors whitespace-nowrap shrink-0"
-          >
-            <Play className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>Process Next Pickup</span>
-          </button>
+          {isAdmin && (
+            <button
+              onClick={handleProcessRealPickup}
+              disabled={liveHeap.size() === 0}
+              className="inline-flex items-center gap-2 px-4 py-2.5 min-h-[40px] text-xs font-medium text-white bg-emerald-700 hover:bg-emerald-800 disabled:opacity-45 disabled:cursor-not-allowed rounded-xl transition-colors whitespace-nowrap shrink-0"
+            >
+              <Play className="w-3.5 h-3.5" aria-hidden="true" />
+              <span>Process Next Pickup</span>
+            </button>
+          )}
         </div>
       </div>
 
       {isSimulating && (
-        <div className="px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900 flex flex-wrap items-center justify-between gap-3">
+        <div className="px-4 py-3 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded-xl text-xs text-amber-900 dark:text-amber-200 flex flex-wrap items-center justify-between gap-3">
           <span>
             <strong>What-If Simulation Active:</strong> {simLog || 'Viewing temporary heap modifications.'}
           </span>
@@ -144,33 +148,33 @@ export function SchedulerView({ wasteRecords, onProcessNextPickup }: SchedulerVi
       {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         <section className="group lg:col-span-8 surface-card p-5">
-          <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100 dark:border-zinc-800">
             <div className="flex items-center gap-2.5">
               <GlassIcon tone="amber" size="sm">
                 <Layers className="w-4 h-4" aria-hidden="true" />
               </GlassIcon>
               <div>
-                <h2 className="text-sm font-semibold text-slate-900">
-                  Max-Heap Binary Tree & 1-Based Array
+                <h2 className="text-sm font-semibold text-slate-900 dark:text-zinc-100">
+                  Max-Heap Binary Tree &amp; 1-Based Array
                 </h2>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                   Heap size n = {heapNodes.length} · Root at index 1 is always next dispatch
                 </p>
               </div>
             </div>
             {heapNodes.length > 15 && (
-              <span className="text-xs text-slate-500 font-mono">
+              <span className="text-xs text-slate-500 dark:text-zinc-400 font-mono">
                 Showing top 15 of {heapNodes.length} nodes
               </span>
             )}
           </div>
 
           {visibleNodes.length === 0 ? (
-            <div className="py-16 text-center text-sm text-slate-500">
+            <div className="py-16 text-center text-sm text-slate-500 dark:text-zinc-400">
               No pending waste pickups in scheduler. Add pending waste points in WASTEX to build the heap.
             </div>
           ) : (
-            <div className="mt-4 bg-slate-50 border border-slate-200 rounded-md p-2 overflow-x-auto">
+            <div className="mt-4 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl p-2 overflow-x-auto">
               <svg viewBox={`0 0 ${svgW} ${svgH}`} className="w-full min-w-[540px] h-72">
                 {visibleNodes.map((node, idx) => {
                   const i = idx + 1;
@@ -185,7 +189,7 @@ export function SchedulerView({ wasteRecords, onProcessNextPickup }: SchedulerVi
                       y1={pPos.y}
                       x2={cPos.x}
                       y2={cPos.y}
-                      stroke="#CBD5E1"
+                      stroke={isDark ? '#27272A' : '#CBD5E1'}
                       strokeWidth={1.75}
                     />
                   );
@@ -197,13 +201,21 @@ export function SchedulerView({ wasteRecords, onProcessNextPickup }: SchedulerVi
                   const isRoot = i === 1;
                   const strokeColor =
                     node.urgency === 4
-                      ? '#DC2626'
+                      ? '#EF4444'
                       : node.urgency === 3
-                        ? '#D97706'
+                        ? '#F59E0B'
                         : isRoot
-                          ? '#1D4ED8'
-                          : '#64748B';
-                  const fillColor = isRoot ? '#EFF6FF' : '#FFFFFF';
+                          ? '#10B981'
+                          : isDark
+                            ? '#52525B'
+                            : '#64748B';
+                  const fillColor = isRoot
+                    ? isDark
+                      ? '#052E16'
+                      : '#ECFDF5'
+                    : isDark
+                      ? '#18181B'
+                      : '#FFFFFF';
                   return (
                     <g key={`node-${node.id}-${i}`}>
                       <rect
@@ -211,7 +223,7 @@ export function SchedulerView({ wasteRecords, onProcessNextPickup }: SchedulerVi
                         y={y - 22}
                         width={72}
                         height={44}
-                        rx={6}
+                        rx={8}
                         fill={fillColor}
                         stroke={strokeColor}
                         strokeWidth={isRoot ? 2.2 : 1.5}
@@ -220,7 +232,7 @@ export function SchedulerView({ wasteRecords, onProcessNextPickup }: SchedulerVi
                         x={x}
                         y={y - 5}
                         textAnchor="middle"
-                        className="fill-slate-900 font-mono text-[11px] font-bold"
+                        className="fill-slate-900 dark:fill-zinc-100 font-mono text-[11px] font-bold"
                       >
                         [{i}] #{node.id}
                       </text>
@@ -228,7 +240,7 @@ export function SchedulerView({ wasteRecords, onProcessNextPickup }: SchedulerVi
                         x={x}
                         y={y + 11}
                         textAnchor="middle"
-                        className="fill-slate-600 font-mono text-[10px]"
+                        className="fill-slate-600 dark:fill-zinc-400 font-mono text-[10px]"
                       >
                         U{node.urgency} · {node.amountKg}kg
                       </text>
@@ -240,8 +252,8 @@ export function SchedulerView({ wasteRecords, onProcessNextPickup }: SchedulerVi
           )}
 
           {heapNodes.length > 0 && (
-            <div className="mt-4 pt-3 border-t border-slate-100">
-              <div className="text-xs text-slate-500 mb-2">
+            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-zinc-800">
+              <div className="text-xs text-slate-500 dark:text-zinc-400 mb-2">
                 1-Based Heap Array (parent = i/2, left = 2i, right = 2i+1):
               </div>
               <div className="flex flex-wrap gap-1.5">
@@ -250,8 +262,8 @@ export function SchedulerView({ wasteRecords, onProcessNextPickup }: SchedulerVi
                     key={`arr-${node.id}-${idx}`}
                     className={`px-2.5 py-1 rounded border font-mono tabular-nums text-xs ${
                       idx === 0
-                        ? 'bg-blue-700 text-white border-blue-700 font-semibold'
-                        : 'bg-slate-50 text-slate-800 border-slate-200'
+                        ? 'bg-emerald-700 text-white border-emerald-700 font-semibold'
+                        : 'bg-slate-50 dark:bg-zinc-900 text-slate-800 dark:text-zinc-200 border-slate-200 dark:border-zinc-800'
                     }`}
                   >
                     [{idx + 1}] #{node.id} ({node.urgency}/{node.amountKg}kg)
@@ -264,20 +276,20 @@ export function SchedulerView({ wasteRecords, onProcessNextPickup }: SchedulerVi
 
         {/* What-If Simulator Controls */}
         <Tilt3DCard as="section" className="group lg:col-span-4 p-5 space-y-4" maxTilt={2.2}>
-          <div className="relative z-10 flex items-center gap-2.5 pb-3 border-b border-slate-100">
-            <GlassIcon tone="blue" size="sm">
+          <div className="relative z-10 flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-zinc-800">
+            <GlassIcon tone="emerald" size="sm">
               <Sliders className="w-4 h-4" aria-hidden="true" />
             </GlassIcon>
-            <h2 className="text-sm font-semibold text-slate-900">What-If Plan Simulator</h2>
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-zinc-100">What-If Plan Simulator</h2>
           </div>
 
-          <p className="text-xs text-slate-600 leading-relaxed">
+          <p className="relative z-10 text-xs text-slate-600 dark:text-zinc-400 leading-relaxed">
             Test temporary urgency changes or removals on a cloned Max Heap without altering your saved WasteX records.
           </p>
 
-          <form onSubmit={handleWhatIfUrgency} className="space-y-3">
+          <form onSubmit={handleWhatIfUrgency} className="relative z-10 space-y-3">
             <div>
-              <label htmlFor="sim-id" className="block text-xs font-medium text-slate-700 mb-1">
+              <label htmlFor="sim-id" className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1">
                 Target Pending Waste ID
               </label>
               <select
@@ -285,7 +297,7 @@ export function SchedulerView({ wasteRecords, onProcessNextPickup }: SchedulerVi
                 value={selectedId}
                 onChange={(e) => setSelectedId(e.target.value)}
                 disabled={orderedPickups.length === 0}
-                className="w-full h-10 px-3 text-xs font-mono bg-white border border-slate-300 rounded-md"
+                className="w-full h-10 px-3 text-xs font-mono bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 border border-slate-300 dark:border-zinc-700 rounded-lg"
               >
                 {orderedPickups.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -296,7 +308,7 @@ export function SchedulerView({ wasteRecords, onProcessNextPickup }: SchedulerVi
             </div>
 
             <div>
-              <label htmlFor="sim-urgency" className="block text-xs font-medium text-slate-700 mb-1">
+              <label htmlFor="sim-urgency" className="block text-xs font-medium text-slate-700 dark:text-zinc-300 mb-1">
                 Simulated Urgency (1–4)
               </label>
               <select
@@ -304,7 +316,7 @@ export function SchedulerView({ wasteRecords, onProcessNextPickup }: SchedulerVi
                 value={newUrgency}
                 onChange={(e) => setNewUrgency(Number(e.target.value) as PriorityLevel)}
                 disabled={orderedPickups.length === 0}
-                className="w-full h-10 px-3 text-xs bg-white border border-slate-300 rounded-md"
+                className="w-full h-10 px-3 text-xs bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 border border-slate-300 dark:border-zinc-700 rounded-lg"
               >
                 <option value={1}>1 — Low</option>
                 <option value={2}>2 — Medium</option>
@@ -317,7 +329,7 @@ export function SchedulerView({ wasteRecords, onProcessNextPickup }: SchedulerVi
               <button
                 type="submit"
                 disabled={orderedPickups.length === 0}
-                className="w-full py-2.5 px-3 text-xs font-medium text-white bg-slate-900 hover:bg-slate-800 disabled:opacity-45 rounded-md transition-colors"
+                className="w-full py-2.5 px-3 text-xs font-medium text-white dark:text-zinc-950 bg-zinc-900 dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-45 rounded-lg transition-colors"
               >
                 Simulate Urgency Update
               </button>
@@ -325,7 +337,7 @@ export function SchedulerView({ wasteRecords, onProcessNextPickup }: SchedulerVi
                 type="button"
                 onClick={handleWhatIfRemove}
                 disabled={orderedPickups.length === 0}
-                className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 px-3 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 disabled:opacity-45 rounded-md transition-colors"
+                className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 px-3 text-xs font-medium text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/50 hover:bg-red-100 dark:hover:bg-red-950 border border-red-200 dark:border-red-900 disabled:opacity-45 rounded-lg transition-colors"
               >
                 <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
                 <span>Simulate Remove from Plan</span>
@@ -337,24 +349,24 @@ export function SchedulerView({ wasteRecords, onProcessNextPickup }: SchedulerVi
 
       {/* Extraction Order Table */}
       <div className="surface-card overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-900">
+        <div className="px-5 py-4 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-zinc-100">
             Collection Dispatch Order (Highest Priority First)
           </h2>
-          <span className="text-xs text-slate-500 font-mono tabular-nums">
+          <span className="text-xs text-slate-500 dark:text-zinc-400 font-mono tabular-nums">
             {orderedPickups.length} pending task(s)
           </span>
         </div>
 
         {orderedPickups.length === 0 ? (
-          <div className="p-8 text-center text-sm text-slate-500">
+          <div className="p-8 text-center text-sm text-slate-500 dark:text-zinc-400">
             No pending waste tasks in queue.
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold text-slate-600">
+                <tr className="border-b border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/70 text-xs font-semibold text-slate-600 dark:text-zinc-400">
                   <th className="py-3 px-4">Rank</th>
                   <th className="py-3 px-4">Waste ID</th>
                   <th className="py-3 px-4">Area</th>
@@ -363,21 +375,25 @@ export function SchedulerView({ wasteRecords, onProcessNextPickup }: SchedulerVi
                   <th className="py-3 px-4">Urgency</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-sm">
+              <tbody className="divide-y divide-slate-100 dark:divide-zinc-800 text-sm">
                 {orderedPickups.map((t, index) => (
                   <tr
                     key={t.id}
-                    className={index === 0 ? 'bg-blue-50/40' : 'hover:bg-slate-50/80'}
+                    className={
+                      index === 0
+                        ? 'bg-emerald-50/60 dark:bg-emerald-950/25'
+                        : 'hover:bg-slate-50/80 dark:hover:bg-zinc-900/60'
+                    }
                   >
-                    <td className="py-3 px-4 font-mono tabular-nums font-bold text-slate-900">
+                    <td className="py-3 px-4 font-mono tabular-nums font-bold text-slate-900 dark:text-zinc-100">
                       #{index + 1}
                     </td>
-                    <td className="py-3 px-4 font-mono tabular-nums font-semibold text-blue-700">
+                    <td className="py-3 px-4 font-mono tabular-nums font-semibold text-emerald-700 dark:text-emerald-400">
                       {t.id}
                     </td>
-                    <td className="py-3 px-4 font-medium text-slate-800 whitespace-nowrap">{t.area}</td>
-                    <td className="py-3 px-4 text-slate-600 whitespace-nowrap">{t.wasteType}</td>
-                    <td className="py-3 px-4 text-right font-mono tabular-nums text-slate-900">
+                    <td className="py-3 px-4 font-medium text-slate-800 dark:text-zinc-200 whitespace-nowrap">{t.area}</td>
+                    <td className="py-3 px-4 text-slate-600 dark:text-zinc-400 whitespace-nowrap">{t.wasteType}</td>
+                    <td className="py-3 px-4 text-right font-mono tabular-nums text-slate-900 dark:text-zinc-100">
                       {t.amountKg.toLocaleString()}
                     </td>
                     <td className="py-3 px-4">

@@ -1,16 +1,41 @@
+export type UserRole = 'Admin' | 'Customer';
+export type AccountStatus = 'active' | 'suspended';
+
 export interface AuthUser {
   id: string;
   name: string;
   email: string;
-  role: 'Coordinator' | 'Member';
+  role: UserRole;
+  status: AccountStatus;
   createdAt: string;
 }
 
-export interface UserSheetConfig {
-  spreadsheetId: string;
-  spreadsheetTitle: string;
-  autoSync: boolean;
-  updatedAt?: string;
+export interface SystemSettings {
+  intakeOpen: boolean;
+  maintenanceBanner: string;
+  autoEscalateCritical: boolean;
+  updatedAt: string;
+  updatedBy: string;
+}
+
+export interface SystemStatusInfo {
+  adminClaimed: boolean;
+  adminName: string | null;
+  settings: SystemSettings;
+}
+
+export interface AuditEntry {
+  id: string;
+  actor: string;
+  action: string;
+  target: string;
+  timestamp: string;
+}
+
+export interface AdminOverviewPayload {
+  users: AuthUser[];
+  settings: SystemSettings;
+  auditLog: AuditEntry[];
 }
 
 // Held strictly in JS memory (never stored in localStorage/sessionStorage)
@@ -38,6 +63,10 @@ async function apiJson<T>(url: string, options: RequestInit = {}): Promise<T> {
     throw new Error(typeof data?.error === 'string' ? data.error : `Request failed (${res.status})`);
   }
   return data as T;
+}
+
+export async function fetchSystemStatus(): Promise<SystemStatusInfo> {
+  return apiJson<SystemStatusInfo>('/api/system/status');
 }
 
 export async function registerAccount(
@@ -70,19 +99,43 @@ export async function logoutAccount(): Promise<void> {
   }
 }
 
-export async function fetchUserSheetConfig(): Promise<UserSheetConfig | null> {
-  if (!inMemoryToken) return null;
-  const res = await apiJson<{ config: UserSheetConfig | null }>('/api/user/sheet-config');
-  return res.config;
+export async function fetchAdminOverview(): Promise<AdminOverviewPayload> {
+  return apiJson<AdminOverviewPayload>('/api/admin/overview');
 }
 
-export async function saveUserSheetConfig(
-  config: Pick<UserSheetConfig, 'spreadsheetId' | 'spreadsheetTitle' | 'autoSync'>,
-): Promise<UserSheetConfig | null> {
-  if (!inMemoryToken) return null;
-  const res = await apiJson<{ config: UserSheetConfig | null }>('/api/user/sheet-config', {
-    method: 'PUT',
-    body: JSON.stringify(config),
+export async function updateCustomerStatus(
+  userId: string,
+  status: AccountStatus,
+): Promise<{ user: AuthUser; auditLog: AuditEntry[] }> {
+  return apiJson<{ user: AuthUser; auditLog: AuditEntry[] }>(`/api/admin/users/${encodeURIComponent(userId)}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
   });
-  return res.config;
+}
+
+export async function deleteCustomerAccount(
+  userId: string,
+): Promise<{ ok: boolean; auditLog: AuditEntry[] }> {
+  return apiJson<{ ok: boolean; auditLog: AuditEntry[] }>(`/api/admin/users/${encodeURIComponent(userId)}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function updateAdminSettings(
+  patch: Partial<Pick<SystemSettings, 'intakeOpen' | 'maintenanceBanner' | 'autoEscalateCritical'>>,
+): Promise<{ settings: SystemSettings; auditLog: AuditEntry[] }> {
+  return apiJson<{ settings: SystemSettings; auditLog: AuditEntry[] }>('/api/admin/settings', {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function recordAdminAudit(
+  action: string,
+  target: string,
+): Promise<{ auditLog: AuditEntry[] }> {
+  return apiJson<{ auditLog: AuditEntry[] }>('/api/admin/audit', {
+    method: 'POST',
+    body: JSON.stringify({ action, target }),
+  });
 }

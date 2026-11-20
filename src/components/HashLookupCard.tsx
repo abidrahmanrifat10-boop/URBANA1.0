@@ -44,14 +44,14 @@ export function HashLookupCard<T extends { id: number }>({
           <GlassIcon tone="slate" size="sm">
             <Hash className="w-3.5 h-3.5" aria-hidden="true" />
           </GlassIcon>
-          <h2 className="text-sm font-semibold text-slate-900 truncate">{title}</h2>
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-zinc-100 truncate">{title}</h2>
         </div>
-        <span className="text-xs font-mono text-slate-500 shrink-0">{subtitle}</span>
+        <span className="text-xs font-mono text-slate-500 dark:text-zinc-400 shrink-0">{subtitle}</span>
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1">
-          <Hash className="w-4 h-4 text-slate-400 absolute left-3 top-3" aria-hidden="true" />
+          <Hash className="w-4 h-4 text-slate-400 dark:text-zinc-500 absolute left-3 top-3" aria-hidden="true" />
           <input
             type="number"
             min={1}
@@ -62,38 +62,38 @@ export function HashLookupCard<T extends { id: number }>({
             }}
             placeholder={placeholder}
             aria-label={title}
-            className="w-full h-10 pl-9 pr-3 text-sm font-mono tabular-nums bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"
+            className="w-full h-10 pl-9 pr-3 text-sm font-mono tabular-nums bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 border border-slate-300 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
           />
         </div>
         <button
           type="submit"
-          className="px-4 h-10 text-xs font-medium text-white bg-slate-900 hover:bg-slate-800 rounded-md transition-colors whitespace-nowrap shrink-0"
+          className="px-4 h-10 text-xs font-medium text-white dark:text-zinc-950 bg-zinc-900 dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 rounded-lg transition-colors whitespace-nowrap shrink-0"
         >
           Lookup ID
         </button>
       </form>
 
       {validationError && (
-        <p className="mt-2 text-xs font-medium text-red-600" role="alert">
+        <p className="mt-2 text-xs font-medium text-red-600 dark:text-red-400" role="alert">
           {validationError}
         </p>
       )}
 
       {trace && (
-        <div className="mt-3 pt-3 border-t border-slate-100 text-xs space-y-1.5">
-          <div className="flex flex-wrap items-center justify-between gap-2 text-slate-600">
+        <div className="mt-3 pt-3 border-t border-slate-100 dark:border-zinc-800 text-xs space-y-1.5">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-slate-600 dark:text-zinc-400">
             <span>
-              Hash Bucket: <strong className="font-mono text-slate-900">#{trace.slot}</strong> · Chain: [
+              Hash Bucket: <strong className="font-mono text-slate-900 dark:text-zinc-100">#{trace.slot}</strong> · Chain: [
               <span className="font-mono">{trace.chainIds.join(', ') || 'empty'}</span>]
             </span>
-            <span className="font-mono text-slate-500">{trace.steps} probe(s)</span>
+            <span className="font-mono text-slate-500 dark:text-zinc-400">{trace.steps} probe(s)</span>
           </div>
           {trace.found && trace.record ? (
-            <div className="p-2.5 bg-slate-50 border border-slate-200 rounded text-slate-800">
+            <div className="p-2.5 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg text-slate-800 dark:text-zinc-200">
               {renderFound(trace.record)}
             </div>
           ) : (
-            <p className="text-red-600 font-medium">{notFoundLabel(trace.id)}</p>
+            <p className="text-red-600 dark:text-red-400 font-medium">{notFoundLabel(trace.id)}</p>
           )}
         </div>
       )}
