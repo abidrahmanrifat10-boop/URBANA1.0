@@ -28,28 +28,28 @@ const MODULES: Array<{
 }> = [
   {
     tab: 'citypulse',
-    title: 'CITYPULSE',
+    title: 'CityPulse',
     ds: 'Linked List · Hash Index · Queue · Undo Stack · Trie',
     summary:
-      'Logs municipal complaints (Traffic, Road Damage, Waterlogging, Pollution, Street Light, Other), processes them in FIFO queue order, and supports instant undo.',
+      'Collects reports on traffic, road damage, waterlogging, pollution and street lighting, and works through them in the order received.',
     tone: 'blue',
     icon: ShieldAlert,
   },
   {
     tab: 'wastex',
-    title: 'WASTEX',
+    title: 'WasteX',
     ds: 'Singly Linked List · O(1) Hash Index (211 buckets)',
     summary:
-      'Tracks waste collection points across Rajshahi by waste category, estimated weight in kg, urgency level, and completion state.',
+      'Tracks pickup requests across the city by waste type, estimated weight, urgency and collection status.',
     tone: 'emerald',
     icon: Recycle,
   },
   {
     tab: 'scheduler',
-    title: 'Heap Scheduler',
+    title: 'Scheduler',
     ds: '1-Based Binary Max-Heap + What-If Clone',
     summary:
-      'Prioritizes pending pickups by urgency, then weight, then ID, with an interactive binary tree view and safe What-If simulation.',
+      'Orders pending pickups by urgency and volume, and lets the team preview changes before applying them.',
     tone: 'amber',
     icon: Layers,
   },
@@ -58,7 +58,7 @@ const MODULES: Array<{
     title: 'Road Network',
     ds: '8×8 Adjacency Matrix · Dijkstra · Kruskal MST',
     summary:
-      'Plans shortest municipal routes between Rajshahi areas and computes the minimum-distance spanning road plan using Union-Find.',
+      'Finds the shortest route between zones and the minimum set of roads that keeps every zone connected.',
     tone: 'slate',
     icon: Route,
   },
@@ -110,10 +110,10 @@ export function AboutView({ onNavigate }: AboutViewProps) {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div>
           <p className="text-xs font-medium text-slate-500 dark:text-zinc-400">
-            System Architecture &amp; Overview · Rajshahi
+            Rajshahi City Services
           </p>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-zinc-100 mt-1">
-            About URBANA
+            About
           </h1>
         </div>
         <button
@@ -135,29 +135,28 @@ export function AboutView({ onNavigate }: AboutViewProps) {
               </GlassIcon>
               <div>
                 <h2 className="text-base font-semibold text-slate-900 dark:text-zinc-100">
-                  URBANA — Smart City Management System
+                  URBANA
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-zinc-400">
-                  Data-structure-driven civic operations control room for Rajshahi City
+                  City service management for Rajshahi
                 </p>
               </div>
             </div>
             <p className="text-sm text-slate-600 dark:text-zinc-400 leading-relaxed">
-              URBANA unifies civic issue resolution, solid-waste collection tracking, priority dispatch
-              scheduling, and municipal road routing into one live workspace. Every action runs directly on
-              classic C++ data structures ported to TypeScript with instant visual feedback and automatic
-              local persistence.
+              URBANA brings civic issue reporting, waste collection, pickup scheduling and road routing
+              together in one workspace. Citizens can submit and follow requests, while the city team
+              reviews, prioritises and resolves them.
             </p>
           </div>
 
           <div className="relative z-10 pt-4 border-t border-slate-100 dark:border-zinc-800 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
             <div>
               <div className="text-slate-400 dark:text-zinc-500">City Scope</div>
-              <div className="font-semibold text-slate-900 dark:text-zinc-100 mt-0.5">{MAX_AREAS} Rajshahi Zones</div>
+              <div className="font-semibold text-slate-900 dark:text-zinc-100 mt-0.5">{MAX_AREAS} zones</div>
             </div>
             <div>
               <div className="text-slate-400 dark:text-zinc-500">Modules</div>
-              <div className="font-semibold text-slate-900 dark:text-zinc-100 mt-0.5">4 Integrated Views</div>
+              <div className="font-semibold text-slate-900 dark:text-zinc-100 mt-0.5">4 services</div>
             </div>
             <div>
               <div className="text-slate-400 dark:text-zinc-500">Record Cap</div>
@@ -165,7 +164,7 @@ export function AboutView({ onNavigate }: AboutViewProps) {
             </div>
             <div>
               <div className="text-slate-400 dark:text-zinc-500">Persistence</div>
-              <div className="font-semibold text-slate-900 dark:text-zinc-100 mt-0.5">Auto LocalStorage</div>
+              <div className="font-semibold text-slate-900 dark:text-zinc-100 mt-0.5">Saved automatically</div>
             </div>
           </div>
         </Tilt3DCard>
@@ -183,7 +182,7 @@ export function AboutView({ onNavigate }: AboutViewProps) {
 
           <div className="relative z-10 space-y-2.5">
             <div className="flex items-center justify-between text-xs text-slate-500 dark:text-zinc-400">
-              <span className="font-medium text-slate-700 dark:text-zinc-300">Covered Municipal Zones</span>
+              <span className="font-medium text-slate-700 dark:text-zinc-300">Service Zones</span>
               <span className="font-mono tabular-nums">Index 0–7</span>
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -205,8 +204,8 @@ export function AboutView({ onNavigate }: AboutViewProps) {
       {/* 4 Core Modules */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-zinc-100">Core Operational Modules</h2>
-          <span className="text-xs text-slate-500 dark:text-zinc-400">Click any module to open</span>
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-zinc-100">Services</h2>
+          <span className="text-xs text-slate-500 dark:text-zinc-400">Select a service to open it</span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           {MODULES.map((mod) => {
@@ -247,14 +246,14 @@ export function AboutView({ onNavigate }: AboutViewProps) {
             </GlassIcon>
             <div>
               <h2 className="text-sm font-semibold text-slate-900 dark:text-zinc-100">
-                Engine Data Structures &amp; Algorithms
+                How It Works
               </h2>
               <p className="text-xs text-slate-500 dark:text-zinc-400">
-                Concise reference of the algorithms powering URBANA
+                The data structures and algorithms behind each service
               </p>
             </div>
           </div>
-          <span className="text-xs font-mono text-slate-500 dark:text-zinc-400">6 Core Structures</span>
+          <span className="text-xs font-mono text-slate-500 dark:text-zinc-400">6 structures</span>
         </div>
 
         <div className="relative z-10 mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">

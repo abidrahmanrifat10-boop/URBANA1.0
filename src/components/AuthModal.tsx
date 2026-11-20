@@ -111,12 +111,12 @@ export function AuthModal({
             </GlassIcon>
             <div>
               <h2 id="auth-modal-title" className="text-base font-semibold text-slate-900 dark:text-zinc-100">
-                {mode === 'register' ? 'Create Customer Account' : 'Sign In to URBANA'}
+                {mode === 'register' ? 'Create your account' : 'Sign in'}
               </h2>
               <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
                 {mode === 'register'
-                  ? 'Register to submit & track civic reports and pickups'
-                  : 'Sign in to access your URBANA account'}
+                  ? 'Submit reports and follow their progress in one place.'
+                  : 'Welcome back. Enter your details to continue.'}
               </p>
             </div>
           </div>
@@ -145,7 +145,7 @@ export function AuthModal({
                 : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-200'
             }`}
           >
-            Customer Sign Up
+            Create Account
           </button>
           <button
             type="button"
@@ -271,7 +271,7 @@ export function AuthModal({
               {submitting
                 ? 'Please wait...'
                 : mode === 'register'
-                  ? 'Create Customer Account'
+                  ? 'Create Account'
                   : 'Sign In'}
             </button>
           </div>

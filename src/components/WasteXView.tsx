@@ -134,10 +134,10 @@ export function WasteXView({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <p className="text-xs font-medium text-slate-500 dark:text-zinc-400">
-            WASTEX · Singly Linked List + O(1) Hash Index (211)
+            WasteX · Waste collection
           </p>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-zinc-100 mt-1">
-            Waste Collection Management
+            Waste Collection
           </h1>
         </div>
 
@@ -147,7 +147,7 @@ export function WasteXView({
           className="inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[40px] text-xs font-medium text-white bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 rounded-xl transition-colors whitespace-nowrap shrink-0 w-fit"
         >
           <Plus className="w-3.5 h-3.5" aria-hidden="true" />
-          <span>{showAddForm ? 'Close Form' : 'Add Waste Point'}</span>
+          <span>{showAddForm ? 'Close Form' : 'New Pickup'}</span>
         </button>
       </div>
 
@@ -304,7 +304,7 @@ export function WasteXView({
               type="submit"
               className="px-4 py-2 text-xs font-medium text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg"
             >
-              Add Waste Point
+              New Pickup
             </button>
           </div>
         </form>
@@ -312,7 +312,7 @@ export function WasteXView({
 
       {/* O(1) Hash Lookup by Waste ID */}
       <HashLookupCard
-        title="O(1) Hash Index Search by Waste ID"
+        title="Find a Pickup by ID"
         subtitle="IdIndex bucket (id % 211)"
         placeholder="Waste ID (e.g. 5001)"
         notFoundLabel={(id) => `Waste record ${id} not found.`}
@@ -356,11 +356,11 @@ export function WasteXView({
           <div className="p-10 text-center space-y-3">
             <p className="text-sm font-medium text-slate-800 dark:text-zinc-200">
               {records.length === 0
-                ? 'No waste collection points registered yet.'
-                : 'No waste records match this filter.'}
+                ? 'No pickup requests yet.'
+                : 'No pickups match this filter.'}
             </p>
             <p className="text-xs text-slate-500 dark:text-zinc-400">
-              Add a Rajshahi collection point to populate WasteX and the Max-Heap Scheduler.
+              New pickup requests will appear here and in the collection schedule.
             </p>
             <div className="pt-1 flex justify-center gap-2">
               {records.length > 0 && (
@@ -375,7 +375,7 @@ export function WasteXView({
                 onClick={() => setShowAddForm(true)}
                 className="px-3.5 py-2 text-xs font-medium text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg"
               >
-                Add Waste Point
+                New Pickup
               </button>
             </div>
           </div>
@@ -531,7 +531,7 @@ export function WasteXView({
       <ConfirmDialog
         open={deleteTarget !== null}
         title={`Delete Waste Point #${deleteTarget?.id ?? ''}?`}
-        description={`This permanently deletes the ${deleteTarget?.amountKg ?? 0} kg ${deleteTarget?.wasteType ?? ''} waste record in ${deleteTarget?.area ?? ''}. WasteX deletions cannot be undone.`}
+        description={`This permanently deletes the ${deleteTarget?.amountKg ?? 0} kg ${deleteTarget?.wasteType ?? ''} waste record in ${deleteTarget?.area ?? ''}. This cannot be undone.`}
         confirmLabel="Delete Permanently"
         tone="danger"
         onConfirm={() => {

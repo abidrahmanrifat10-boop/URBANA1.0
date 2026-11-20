@@ -154,10 +154,10 @@ export function CityPulseView({
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <p className="text-xs font-medium text-slate-500 dark:text-zinc-400">
-            CITYPULSE · Linked List + Hash Index (211) + Circular Queue ({QUEUE_CAPACITY}) + Undo Stack ({UNDO_CAPACITY})
+            CityPulse · Civic issue reports
           </p>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-zinc-100 mt-1">
-            City Issue Management
+            City Issues
           </h1>
         </div>
 
@@ -190,7 +190,7 @@ export function CityPulseView({
             className="inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[40px] text-xs font-medium text-white bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 rounded-xl transition-colors whitespace-nowrap shrink-0"
           >
             <Plus className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>{showAddForm ? 'Close Form' : 'Add City Report'}</span>
+            <span>{showAddForm ? 'Close Form' : 'New Report'}</span>
           </button>
         </div>
       </div>
@@ -233,7 +233,7 @@ export function CityPulseView({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100 dark:border-zinc-800">
             <h2 className="text-sm font-semibold text-slate-900 dark:text-zinc-100">Log New City Issue Report</h2>
             <span className="text-xs text-slate-500 dark:text-zinc-400">
-              Assigns ID, records Undo snapshot, and enqueues in FIFO Complaint Queue
+              Each report receives a reference number and joins the review queue
             </span>
           </div>
 
@@ -339,7 +339,7 @@ export function CityPulseView({
       {/* Search by ID (O(1) Hash Index) + Area Trie Prefix Search */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <HashLookupCard
-          title="O(1) Hash Index Search by Report ID"
+          title="Find a Report by ID"
           placeholder="Enter Report ID (e.g. 1001)"
           notFoundLabel={(id) => `Report ID ${id} not found.`}
           onTraceSearchById={onTraceSearchById}
@@ -462,13 +462,13 @@ export function CityPulseView({
           <div className="p-10 text-center space-y-3">
             <p className="text-sm font-medium text-slate-800 dark:text-zinc-200">
               {reports.length === 0
-                ? 'No city issue reports logged yet.'
-                : 'No city reports match the active filter.'}
+                ? 'No reports yet.'
+                : 'No reports match these filters.'}
             </p>
             <p className="text-xs text-slate-500 dark:text-zinc-400">
               {reports.length === 0
-                ? 'Log your first Rajshahi municipal issue to populate the linked list and queue.'
-                : 'Reset filters or log a new CityPulse report.'}
+                ? 'New reports will appear here as soon as they are submitted.'
+                : 'Try adjusting or clearing the filters.'}
             </p>
             <div className="pt-1 flex justify-center gap-2">
               {reports.length > 0 && (
@@ -486,7 +486,7 @@ export function CityPulseView({
                 onClick={() => setShowAddForm(true)}
                 className="px-3.5 py-2 text-xs font-medium text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg"
               >
-                Add City Report
+                New Report
               </button>
             </div>
           </div>
@@ -583,7 +583,7 @@ export function CityPulseView({
                             <div className="inline-flex items-center gap-1">
                               <button
                                 onClick={() => onToggleResolved(r.id, !r.resolved)}
-                                title={r.resolved ? 'Reopen report (enqueues in FIFO)' : 'Mark completed'}
+                                title={r.resolved ? 'Reopen report' : 'Mark completed'}
                                 aria-label={r.resolved ? `Reopen report ${r.id}` : `Mark report ${r.id} completed`}
                                 className="p-2 text-slate-600 dark:text-zinc-400 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded transition-colors"
                               >
@@ -603,7 +603,7 @@ export function CityPulseView({
                               </button>
                               <button
                                 onClick={() => setDeleteTarget(r)}
-                                title="Delete report (Undo available)"
+                                title="Delete report"
                                 aria-label={`Delete report ${r.id}`}
                                 className="p-2 text-slate-600 dark:text-zinc-400 hover:text-red-700 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50 rounded transition-colors"
                               >
@@ -632,7 +632,7 @@ export function CityPulseView({
               </GlassIcon>
               <div className="min-w-0">
                 <h2 className="text-sm font-semibold text-slate-900 dark:text-zinc-100 truncate">
-                  Live Circular Complaint Queue (FIFO)
+                  Review Queue
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5 font-mono truncate">
                   front={queueSnapshot.front} · rear={queueSnapshot.rear} · count={queueSnapshot.count}/{QUEUE_CAPACITY}
@@ -711,7 +711,7 @@ export function CityPulseView({
               </GlassIcon>
               <div className="min-w-0">
                 <h2 className="text-sm font-semibold text-slate-900 dark:text-zinc-100 truncate">
-                  Live Undo Stack (LIFO Snapshot History)
+                  Recent Changes
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5 font-mono">
                   top={undoItems.length} / capacity {UNDO_CAPACITY}
@@ -730,7 +730,7 @@ export function CityPulseView({
           <div className="relative z-10 mt-4 space-y-2 max-h-64 overflow-y-auto pr-1">
             {undoItems.length === 0 ? (
               <p className="text-xs text-slate-400 dark:text-zinc-500 py-6 text-center">
-                No recorded CityPulse mutations yet. Add, edit, or delete a report to push snapshots.
+                No changes recorded yet.
               </p>
             ) : (
               [...undoItems].reverse().map((act, idx) => (

@@ -109,7 +109,7 @@ export function CustomerHubView({
       return;
     }
     if (!description.trim()) {
-      setIssueError('Please describe the problem so municipal crews can locate it.');
+      setIssueError('Please add a short description so our crew can find the location.');
       return;
     }
     setIssueError('');
@@ -155,10 +155,10 @@ export function CustomerHubView({
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <p className="text-xs font-medium text-slate-500 dark:text-zinc-400">
-            Customer Control Portal · Citizen Issue &amp; Pickup Management
+            Report an issue, request a pickup and track progress
           </p>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-zinc-100 mt-1">
-            Customer Hub
+            Citizen Services
           </h1>
         </div>
 
@@ -169,7 +169,7 @@ export function CustomerHubView({
               onClick={() => onOpenAuth('register')}
               className="px-3.5 py-2 text-xs font-medium text-white bg-emerald-700 hover:bg-emerald-800 rounded-xl transition-colors whitespace-nowrap"
             >
-              Create Customer Account
+              Create Account
             </button>
             <button
               type="button"
@@ -204,7 +204,7 @@ export function CustomerHubView({
           <div className="space-y-0.5">
             {!systemSettings.intakeOpen && (
               <div className="font-semibold">
-                New citizen submissions are currently paused for maintenance.
+                New submissions are temporarily paused for scheduled maintenance.
               </div>
             )}
             {systemSettings.maintenanceBanner && <div>{systemSettings.maintenanceBanner}</div>}
@@ -223,10 +223,10 @@ export function CustomerHubView({
                 </GlassIcon>
                 <div>
                   <h2 className="text-sm font-semibold text-slate-900 dark:text-zinc-100">
-                    Submit a City Service Request
+                    Submit a Request
                   </h2>
                   <p className="text-xs text-slate-500 dark:text-zinc-400">
-                    Dispatched directly into Rajshahi CityPulse &amp; WasteX queues
+                    Sent directly to the responsible city team
                   </p>
                 </div>
               </div>
@@ -324,7 +324,7 @@ export function CustomerHubView({
                       setDescription(e.target.value);
                       if (issueError) setIssueError('');
                     }}
-                    placeholder="Describe street, landmark, or civic issue..."
+                    placeholder="Street, nearby landmark and what you noticed"
                     className="w-full h-10 px-3 text-sm bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 border border-slate-300 dark:border-zinc-700 rounded-lg"
                   />
                   {issueError && (
@@ -343,7 +343,7 @@ export function CustomerHubView({
                     disabled={!systemSettings.intakeOpen || reports.length >= MAX_RECORDS}
                     className="px-4 py-2.5 text-xs font-medium text-white bg-emerald-700 hover:bg-emerald-800 disabled:opacity-45 rounded-xl transition-colors whitespace-nowrap"
                   >
-                    Submit Civic Issue
+                    Submit Report
                   </button>
                 </div>
               </form>
@@ -428,7 +428,7 @@ export function CustomerHubView({
                     type="text"
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Gate number, lane, or bin landmark..."
+                    placeholder="Gate number, lane or nearby landmark"
                     className="w-full h-10 px-3 text-sm bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 border border-slate-300 dark:border-zinc-700 rounded-lg"
                   />
                   {wasteError && (
@@ -464,10 +464,10 @@ export function CustomerHubView({
               </GlassIcon>
               <div>
                 <h2 className="text-sm font-semibold text-slate-900 dark:text-zinc-100">
-                  Rajshahi Route Estimator
+                  Route Finder
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-zinc-400">
-                  Check live shortest road path between zones
+                  Find the shortest road route between two zones
                 </p>
               </div>
             </div>
@@ -531,7 +531,7 @@ export function CustomerHubView({
           </div>
 
           <div className="relative z-10 text-[11px] text-slate-600 dark:text-zinc-400 flex items-center justify-between pt-2 border-t border-slate-100 dark:border-zinc-800">
-            <span>Selected zone open issues:</span>
+            <span>Open issues in this zone:</span>
             <span className="font-mono tabular-nums font-semibold text-slate-900 dark:text-zinc-100">
               {reports.filter((r) => !r.resolved && areaIndex(r.area) === toArea).length} pending
             </span>
@@ -549,12 +549,12 @@ export function CustomerHubView({
               </GlassIcon>
               <div>
                 <h2 className="text-sm font-semibold text-slate-900 dark:text-zinc-100">
-                  {currentUser ? 'My Civic Issue Reports' : 'Recent Civic Reports'}
+                  {currentUser ? 'My Reports' : 'Recent Reports'}
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-zinc-400">
                   {currentUser
                     ? `Tracked for ${currentUser.name}`
-                    : 'Sign in or register to manage your personal tickets'}
+                    : 'Sign in to manage your own requests'}
                 </p>
               </div>
             </div>
@@ -565,7 +565,7 @@ export function CustomerHubView({
             <div className="p-8 text-center space-y-2">
               <p className="text-sm font-medium text-slate-800 dark:text-zinc-200">No civic reports submitted yet.</p>
               <p className="text-xs text-slate-500 dark:text-zinc-400">
-                Use the form above to submit a CityPulse report and track municipal resolution here.
+                Reports you submit will appear here with their current status.
               </p>
             </div>
           ) : (
@@ -612,12 +612,12 @@ export function CustomerHubView({
               </GlassIcon>
               <div>
                 <h2 className="text-sm font-semibold text-slate-900 dark:text-zinc-100">
-                  {currentUser ? 'My Waste Pickup Requests' : 'Recent Waste Requests'}
+                  {currentUser ? 'My Pickup Requests' : 'Recent Pickup Requests'}
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-zinc-400">
                   {currentUser
                     ? `Tracked for ${currentUser.name}`
-                    : 'Scheduled via WasteX priority heap'}
+                    : 'Scheduled by urgency and volume'}
                 </p>
               </div>
             </div>
@@ -628,7 +628,7 @@ export function CustomerHubView({
             <div className="p-8 text-center space-y-2">
               <p className="text-sm font-medium text-slate-800 dark:text-zinc-200">No waste pickup requests yet.</p>
               <p className="text-xs text-slate-500 dark:text-zinc-400">
-                Switch to Waste Pickup above to log a collection point in your Rajshahi zone.
+                Pickup requests you submit will appear here.
               </p>
             </div>
           ) : (
@@ -683,7 +683,7 @@ export function CustomerHubView({
       <ConfirmDialog
         open={cancelTarget !== null}
         title={`Cancel Request #${cancelTarget?.item.id ?? ''}?`}
-        description="This removes your pending request from the URBANA queue."
+        description="Your pending request will be withdrawn. This cannot be undone."
         confirmLabel="Remove Request"
         tone="danger"
         onConfirm={() => {

@@ -101,10 +101,10 @@ export function SchedulerView({ wasteRecords, isDark = false, isAdmin = false, o
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <p className="text-xs font-medium text-slate-500 dark:text-zinc-400">
-            SCHEDULER · 1-Based Binary Max Heap (Priority: Urgency → Amount kg → Smaller ID)
+            Scheduler · Ordered by urgency, then volume
           </p>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-zinc-100 mt-1">
-            Waste Collection Scheduler
+            Collection Schedule
           </h1>
         </div>
 
@@ -134,13 +134,13 @@ export function SchedulerView({ wasteRecords, isDark = false, isAdmin = false, o
       {isSimulating && (
         <div className="px-4 py-3 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded-xl text-xs text-amber-900 dark:text-amber-200 flex flex-wrap items-center justify-between gap-3">
           <span>
-            <strong>What-If Simulation Active:</strong> {simLog || 'Viewing temporary heap modifications.'}
+            <strong>Preview mode:</strong> {simLog || 'You are previewing temporary changes.'}
           </span>
           <button
             onClick={resetSimulation}
             className="font-semibold underline hover:no-underline whitespace-nowrap shrink-0"
           >
-            Exit Simulation
+            Exit Preview
           </button>
         </div>
       )}
@@ -171,7 +171,7 @@ export function SchedulerView({ wasteRecords, isDark = false, isAdmin = false, o
 
           {visibleNodes.length === 0 ? (
             <div className="py-16 text-center text-sm text-slate-500 dark:text-zinc-400">
-              No pending waste pickups in scheduler. Add pending waste points in WASTEX to build the heap.
+              No pickups are waiting. New requests will appear here automatically.
             </div>
           ) : (
             <div className="mt-4 bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl p-2 overflow-x-auto">
@@ -284,7 +284,7 @@ export function SchedulerView({ wasteRecords, isDark = false, isAdmin = false, o
           </div>
 
           <p className="relative z-10 text-xs text-slate-600 dark:text-zinc-400 leading-relaxed">
-            Test temporary urgency changes or removals on a cloned Max Heap without altering your saved WasteX records.
+            Preview how changing a pickup's urgency would affect the schedule. Saved records are not changed.
           </p>
 
           <form onSubmit={handleWhatIfUrgency} className="relative z-10 space-y-3">
@@ -331,7 +331,7 @@ export function SchedulerView({ wasteRecords, isDark = false, isAdmin = false, o
                 disabled={orderedPickups.length === 0}
                 className="w-full py-2.5 px-3 text-xs font-medium text-white dark:text-zinc-950 bg-zinc-900 dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-45 rounded-lg transition-colors"
               >
-                Simulate Urgency Update
+                Preview Change
               </button>
               <button
                 type="button"
@@ -351,7 +351,7 @@ export function SchedulerView({ wasteRecords, isDark = false, isAdmin = false, o
       <div className="surface-card overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-900 dark:text-zinc-100">
-            Collection Dispatch Order (Highest Priority First)
+            Collection Order (highest priority first)
           </h2>
           <span className="text-xs text-slate-500 dark:text-zinc-400 font-mono tabular-nums">
             {orderedPickups.length} pending task(s)
@@ -360,7 +360,7 @@ export function SchedulerView({ wasteRecords, isDark = false, isAdmin = false, o
 
         {orderedPickups.length === 0 ? (
           <div className="p-8 text-center text-sm text-slate-500 dark:text-zinc-400">
-            No pending waste tasks in queue.
+            Nothing scheduled right now.
           </div>
         ) : (
           <div className="overflow-x-auto">

@@ -76,23 +76,23 @@ type ThemeMode = 'white' | 'black';
 interface NavItemDef {
   id: ActiveTab;
   label: string;
-  group: 'MAIN MENU' | 'OPERATIONS' | 'SYSTEM';
+  group: 'OVERVIEW' | 'OPERATIONS' | 'SYSTEM';
   icon: typeof LayoutDashboard;
   adminOnly?: boolean;
 }
 
 const NAV_ITEMS: NavItemDef[] = [
-  { id: 'overview', label: 'Dashboard', group: 'MAIN MENU', icon: LayoutDashboard },
-  { id: 'customer', label: 'Customer Hub', group: 'MAIN MENU', icon: Users },
-  { id: 'citypulse', label: 'CityPulse', group: 'MAIN MENU', icon: ShieldAlert },
-  { id: 'wastex', label: 'WasteX', group: 'MAIN MENU', icon: Recycle },
+  { id: 'overview', label: 'Dashboard', group: 'OVERVIEW', icon: LayoutDashboard },
+  { id: 'customer', label: 'Citizen Services', group: 'OVERVIEW', icon: Users },
+  { id: 'citypulse', label: 'CityPulse', group: 'OVERVIEW', icon: ShieldAlert },
+  { id: 'wastex', label: 'WasteX', group: 'OVERVIEW', icon: Recycle },
   { id: 'scheduler', label: 'Scheduler', group: 'OPERATIONS', icon: Layers },
   { id: 'roads', label: 'Road Network', group: 'OPERATIONS', icon: Route },
-  { id: 'admin', label: 'Admin Plan', group: 'SYSTEM', icon: ShieldCheck, adminOnly: true },
-  { id: 'about', label: 'About URBANA', group: 'SYSTEM', icon: Info },
+  { id: 'admin', label: 'Administration', group: 'SYSTEM', icon: ShieldCheck, adminOnly: true },
+  { id: 'about', label: 'About', group: 'SYSTEM', icon: Info },
 ];
 
-const NAV_GROUPS: Array<NavItemDef['group']> = ['MAIN MENU', 'OPERATIONS', 'SYSTEM'];
+const NAV_GROUPS: Array<NavItemDef['group']> = ['OVERVIEW', 'OPERATIONS', 'SYSTEM'];
 
 const DEFAULT_SETTINGS: SystemSettings = {
   intakeOpen: true,
@@ -288,7 +288,7 @@ export default function App() {
   function requireAdminGuard(actionLabel: string): boolean {
     if (isAdmin) return true;
     showToast(
-      `Authorization required: sign in with an authorized account to ${actionLabel}.`,
+      `Administrator access is required to ${actionLabel}.`,
       'error',
     );
     setAuthModalMode('login');
@@ -308,7 +308,7 @@ export default function App() {
     } else {
       showToast(
         mode === 'register'
-          ? `Customer account created! Welcome, ${user.name}.`
+          ? `Your account is ready. Welcome, ${user.name}.`
           : `Signed in as ${user.name}.`,
         'success',
       );
@@ -320,10 +320,11 @@ export default function App() {
     await logoutAccount();
     setCurrentUser(null);
     if (activeTab === 'admin') setActiveTab('overview');
-    showToast('Signed out of URBANA.', 'info');
+    showToast('You have been signed out.', 'info');
   }
 
   function handleExportReportCsv() {
+    if (!requireAdminGuard('export reports')) return;
     const esc = (v: string | number) => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const lines: string[] = [];
     lines.push('URBANA RAJSHAHI SMART CITY REPORT');
@@ -371,19 +372,19 @@ export default function App() {
     a.download = `URBANA_Rajshahi_Report_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    showToast('Exported Rajshahi Smart City report CSV.', 'success');
+    showToast('Report exported.', 'success');
   }
 
   // ---------------- CITYPULSE HANDLERS ----------------
 
   function handleAddCityReport(data: Omit<CityReport, 'id' | 'resolved'>) {
     if (!systemSettings.intakeOpen && !isAdmin) {
-      showToast('Citizen report submissions are temporarily paused.', 'error');
+      showToast('New submissions are paused at the moment. Please try again later.', 'error');
       return;
     }
     const list = cityListRef.current;
     if (list.full()) {
-      showToast('Report storage full (500 records maximum).', 'error');
+      showToast('Report limit reached (500 records).', 'error');
       return;
     }
     const report: CityReport = {
@@ -398,7 +399,7 @@ export default function App() {
       createdAt: todayStamp(),
     };
     if (!list.insert(report)) {
-      showToast('Could not add report due to duplicate ID.', 'error');
+      showToast('This report could not be saved. Please try again.', 'error');
       return;
     }
     undoRef.current.push({ type: 'ACT_ADD', before: report, timestamp: nowTime() });
@@ -409,8 +410,8 @@ export default function App() {
 
     showToast(
       queued
-        ? `City report #${report.id} submitted to queue.`
-        : `City report #${report.id} saved (complaint queue full).`,
+        ? `Report #${report.id} submitted. Our team will review it shortly.`
+        : `Report #${report.id} saved. The review queue is currently full.`,
       queued ? 'success' : 'info',
     );
   }
@@ -419,7 +420,7 @@ export default function App() {
     if (!requireAdminGuard('edit city reports')) return;
     const node = cityListRef.current.find(id);
     if (!node) {
-      showToast(`Report ${id} not found.`, 'error');
+      showToast(`Report #${id} was not found.`, 'error');
       return;
     }
     undoRef.current.push({ type: 'ACT_MODIFY', before: { ...node.data }, timestamp: nowTime() });
@@ -427,7 +428,7 @@ export default function App() {
     node.data.priority = priority;
     commitAndSync();
     logAdminOp('Updated city report', `#${id}`);
-    showToast(`Updated report ${id}.`, 'success');
+    showToast(`Report #${id} updated.`, 'success');
   }
 
   function handleToggleCityResolved(id: number, resolved: boolean) {
@@ -440,20 +441,20 @@ export default function App() {
     if (!resolved) {
       if (!queueRef.current.contains(id)) {
         const ok = queueRef.current.enqueue(id);
-        queuedNote = ok ? ' and re-enqueued in FIFO' : ' (queue full)';
+        queuedNote = ok ? ' and returned to the review queue' : ' (queue full)';
       } else {
         queuedNote = ' (already in queue)';
       }
     }
     commitAndSync();
     logAdminOp(resolved ? 'Resolved city report' : 'Reopened city report', `#${id}`);
-    showToast(`Report ${id} marked ${resolved ? 'Completed' : `Pending${queuedNote}`}.`, 'success');
+    showToast(`Report #${id} marked ${resolved ? 'resolved' : `pending${queuedNote}`}.`, 'success');
   }
 
   function handleDeleteCityReport(id: number, allowOwner = false) {
     const node = cityListRef.current.find(id);
     if (!node) {
-      showToast(`Report ${id} not found.`, 'error');
+      showToast(`Report #${id} was not found.`, 'error');
       return;
     }
     const ownsReport =
@@ -471,44 +472,44 @@ export default function App() {
     cityListRef.current.remove(id);
     commitAndSync();
     if (isAdmin) logAdminOp('Deleted city report', `#${id}`);
-    showToast(`Report ${id} removed.`, 'info');
+    showToast(`Report #${id} removed.`, 'info');
   }
 
   function handleProcessNextComplaint() {
-    if (!requireAdminGuard('process the FIFO complaint queue')) return;
+    if (!requireAdminGuard('process the review queue')) return;
     const id = queueRef.current.dequeue();
     if (id === null) {
-      showToast('Complaint queue is empty.', 'info');
+      showToast('There are no reports waiting for review.', 'info');
       return;
     }
     const node = cityListRef.current.find(id);
     if (!node) {
       commitAndSync();
-      showToast(`Queued ID ${id} no longer exists. Skipped.`, 'info');
+      showToast(`Report #${id} no longer exists and was skipped.`, 'info');
       return;
     }
     if (node.data.resolved) {
       commitAndSync();
-      showToast(`Queued ID ${id} was already completed. Skipped.`, 'info');
+      showToast(`Report #${id} was already resolved and was skipped.`, 'info');
       return;
     }
     undoRef.current.push({ type: 'ACT_MODIFY', before: { ...node.data }, timestamp: nowTime() });
     node.data.resolved = true;
     commitAndSync();
     logAdminOp('Processed FIFO complaint', `#${id} (${node.data.area})`);
-    showToast(`Processed ID ${id} (${node.data.area}, ${node.data.category}) -> Completed.`, 'success');
+    showToast(`Report #${id} (${node.data.category}, ${node.data.area}) resolved.`, 'success');
   }
 
   function handleUndoLastCityAction() {
     if (!requireAdminGuard('undo city report actions')) return;
     const action = undoRef.current.pop();
     if (!action) {
-      showToast('Nothing to undo.', 'info');
+      showToast('There is nothing to undo.', 'info');
       return;
     }
     if (action.type === 'ACT_ADD') {
       cityListRef.current.remove(action.before.id);
-      showToast(`Undo: removed report ${action.before.id}.`, 'info');
+      showToast(`Undone: report #${action.before.id} removed.`, 'info');
     } else if (action.type === 'ACT_MODIFY') {
       const node = cityListRef.current.find(action.before.id);
       if (node) {
@@ -518,14 +519,14 @@ export default function App() {
           queueRef.current.enqueue(action.before.id);
         }
       }
-      showToast(`Undo: restored report ${action.before.id}.`, 'info');
+      showToast(`Undone: report #${action.before.id} restored.`, 'info');
     } else {
       const ok = cityListRef.current.insert(action.before);
       if (ok && !action.before.resolved && !queueRef.current.contains(action.before.id)) {
         queueRef.current.enqueue(action.before.id);
       }
       showToast(
-        ok ? `Undo: restored deleted report ${action.before.id}.` : 'Cannot undo: storage full.',
+        ok ? `Undone: report #${action.before.id} restored.` : 'Unable to undo: storage limit reached.',
         ok ? 'success' : 'error',
       );
     }
@@ -537,12 +538,12 @@ export default function App() {
 
   function handleAddWaste(data: Omit<WasteRecord, 'id' | 'collected'>) {
     if (!systemSettings.intakeOpen && !isAdmin) {
-      showToast('Waste pickup submissions are temporarily paused.', 'error');
+      showToast('Pickup requests are paused at the moment. Please try again later.', 'error');
       return;
     }
     const list = wasteListRef.current;
     if (list.full()) {
-      showToast('Waste storage full (500 records maximum).', 'error');
+      showToast('Pickup limit reached (500 records).', 'error');
       return;
     }
     const record: WasteRecord = {
@@ -561,9 +562,9 @@ export default function App() {
       nextWasteIdRef.current++;
       commitAndSync();
       if (isAdmin) logAdminOp('Added waste point', `#${record.id} (${record.area})`);
-      showToast(`Waste point #${record.id} scheduled.`, 'success');
+      showToast(`Pickup request #${record.id} scheduled.`, 'success');
     } else {
-      showToast('Could not add waste record.', 'error');
+      showToast('This pickup request could not be saved.', 'error');
     }
   }
 
@@ -571,7 +572,7 @@ export default function App() {
     if (!requireAdminGuard('edit waste collection records')) return;
     const node = wasteListRef.current.find(id);
     if (!node) {
-      showToast(`Waste record ${id} not found.`, 'error');
+      showToast(`Pickup #${id} was not found.`, 'error');
       return;
     }
     node.data.amountKg = amountKg;
@@ -579,7 +580,7 @@ export default function App() {
     node.data.notes = sanitizePipeText(notes);
     commitAndSync();
     logAdminOp('Updated waste point', `#${id}`);
-    showToast(`Updated waste record ${id}.`, 'success');
+    showToast(`Pickup #${id} updated.`, 'success');
   }
 
   function handleToggleWasteCollected(id: number, collected: boolean) {
@@ -589,13 +590,13 @@ export default function App() {
     node.data.collected = collected;
     commitAndSync();
     logAdminOp(collected ? 'Collected waste point' : 'Reopened waste point', `#${id}`);
-    showToast(`Waste point ${id} marked ${collected ? 'Collected' : 'Pending'}.`, 'success');
+    showToast(`Pickup #${id} marked ${collected ? 'collected' : 'pending'}.`, 'success');
   }
 
   function handleDeleteWaste(id: number, allowOwner = false) {
     const node = wasteListRef.current.find(id);
     if (!node) {
-      showToast(`Waste record ${id} not found.`, 'error');
+      showToast(`Pickup #${id} was not found.`, 'error');
       return;
     }
     const ownsRecord =
@@ -612,18 +613,18 @@ export default function App() {
     if (wasteListRef.current.remove(id)) {
       commitAndSync();
       if (isAdmin) logAdminOp('Deleted waste point', `#${id}`);
-      showToast(`Waste record ${id} deleted.`, 'info');
+      showToast(`Pickup #${id} deleted.`, 'info');
     }
   }
 
   function handleProcessNextPickup(id: number) {
-    if (!requireAdminGuard('dispatch Max-Heap waste pickups')) return;
+    if (!requireAdminGuard('dispatch waste pickups')) return;
     const node = wasteListRef.current.find(id);
     if (!node) return;
     node.data.collected = true;
     commitAndSync();
     logAdminOp('Dispatched Max-Heap pickup', `#${id} (${node.data.area})`);
-    showToast(`Collected ID ${id} (${node.data.area}).`, 'success');
+    showToast(`Pickup #${id} in ${node.data.area} marked collected.`, 'success');
   }
 
   // ---------------- ROAD GRAPH HANDLERS ----------------
@@ -633,9 +634,9 @@ export default function App() {
     if (graphRef.current.addRoad(a, b, km)) {
       commitAndSync();
       logAdminOp('Saved road link', `${a}<->${b} (${km} km)`);
-      showToast(`Road saved (${km} km).`, 'success');
+      showToast(`Road link saved (${km} km).`, 'success');
     } else {
-      showToast('Invalid road connection or distance.', 'error');
+      showToast('Please check the selected areas and distance.', 'error');
     }
   }
 
@@ -646,7 +647,7 @@ export default function App() {
       logAdminOp('Updated road distance', `${a}<->${b} (${km} km)`);
       showToast(`Road distance updated (${km} km).`, 'success');
     } else {
-      showToast('Road not found.', 'error');
+      showToast('That road link does not exist.', 'error');
     }
   }
 
@@ -655,9 +656,9 @@ export default function App() {
     if (graphRef.current.deleteRoad(a, b)) {
       commitAndSync();
       logAdminOp('Deleted road link', `${a}<->${b}`);
-      showToast('Road connection deleted.', 'info');
+      showToast('Road link removed.', 'info');
     } else {
-      showToast('Road not found.', 'error');
+      showToast('That road link does not exist.', 'error');
     }
   }
 
@@ -666,7 +667,7 @@ export default function App() {
     graphRef.current.loadDemo();
     commitAndSync();
     logAdminOp('Reset road network', '12 Rajshahi links');
-    showToast('Restored 12 demo Rajshahi road links.', 'success');
+    showToast('Default road network restored.', 'success');
   }
 
   const reports = cityListRef.current.toArray();
@@ -714,7 +715,7 @@ export default function App() {
                   URBANA
                 </div>
                 <div className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
-                  Rajshahi Smart City
+                  Rajshahi City Services
                 </div>
               </div>
             </button>
@@ -836,7 +837,7 @@ export default function App() {
                     <span className="truncate">{currentUser.name}</span>
                   </span>
                   <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 shrink-0">
-                    {isAdmin ? '1/1 Admin' : 'Customer'}
+                    {isAdmin ? 'Admin' : 'Citizen'}
                   </span>
                 </div>
                 <div className="text-[11px] text-slate-500 dark:text-zinc-400 truncate">
@@ -860,7 +861,7 @@ export default function App() {
                     Citizen Account
                   </div>
                   <p className="text-[11px] text-slate-500 dark:text-zinc-400 leading-snug">
-                    Sign up or sign in to submit and track requests.
+                    Create an account to submit requests and follow their progress.
                   </p>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -1026,13 +1027,13 @@ export default function App() {
             <button
               type="button"
               onClick={() =>
-                activeTab === 'overview'
+                activeTab === 'overview' && isAdmin
                   ? handleExportReportCsv()
                   : setActiveTab('customer')
               }
               className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold shadow-xs transition-colors whitespace-nowrap"
             >
-              {activeTab === 'overview' ? (
+              {activeTab === 'overview' && isAdmin ? (
                 <>
                   <Download className="w-3.5 h-3.5" aria-hidden="true" />
                   <span className="hidden md:inline">Export Report</span>
@@ -1118,7 +1119,7 @@ export default function App() {
                   queueSize={queueSnapshot.count}
                   undoSize={undoItems.length}
                   isDark={isDark}
-                  onExportCsv={handleExportReportCsv}
+                  onExportCsv={isAdmin ? handleExportReportCsv : undefined}
                   onNavigate={setActiveTab}
                 />
               )}
@@ -1225,7 +1226,7 @@ export default function App() {
                   queueSize={queueSnapshot.count}
                   undoSize={undoItems.length}
                   isDark={isDark}
-                  onExportCsv={handleExportReportCsv}
+                  onExportCsv={isAdmin ? handleExportReportCsv : undefined}
                   onNavigate={setActiveTab}
                 />
               )}
